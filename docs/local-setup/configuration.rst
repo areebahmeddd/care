@@ -207,3 +207,45 @@ If you get an :code:`ImproperlyConfigured` error regarding the Spatialite librar
 ::
 
   $ sudo apt install libsqlite3-mod-spatialite
+
+Heroku Deployment
+=================
+
+To deploy the backend along with Celery on Heroku, follow these steps:
+
+1. Ensure you have the Heroku CLI installed and are logged in.
+
+2. Create a new Heroku app:
+
+    .. code-block:: bash
+
+        heroku create your-app-name
+
+3. Add the necessary add-ons for PostgreSQL and Redis:
+
+    .. code-block:: bash
+
+        heroku addons:create heroku-postgresql:hobby-dev
+        heroku addons:create heroku-redis:hobby-dev
+
+4. Set the environment variables:
+
+    .. code-block:: bash
+
+        heroku config:set DJANGO_SETTINGS_MODULE=config.settings.production
+        heroku config:set DATABASE_URL=your-database-url
+        heroku config:set REDIS_URL=your-redis-url
+        heroku config:set CELERY_BROKER_URL=your-redis-url
+
+5. Deploy the app:
+
+    .. code-block:: bash
+
+        git push heroku main
+
+6. Run the migrations and load the Redis index:
+
+    .. code-block:: bash
+
+        heroku run python manage.py migrate
+        heroku run python manage.py load_redis_index
