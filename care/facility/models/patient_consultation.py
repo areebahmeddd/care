@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from care.facility.models import (
     CATEGORY_CHOICES,
-    COVID_CATEGORY_CHOICES,
     PatientBaseModel,
 )
 from care.facility.models.file_upload import FileUpload
@@ -17,7 +16,6 @@ from care.facility.models.patient_base import (
     DISCHARGE_REASON_CHOICES,
     NEW_DISCHARGE_REASON_CHOICES,
     REVERSE_CATEGORY_CHOICES,
-    REVERSE_COVID_CATEGORY_CHOICES,
     RouteToFacility,
     SuggestionChoices,
     reverse_choices,
@@ -65,13 +63,6 @@ class PatientConsultation(PatientBaseModel, ConsultationRelatedPermissionMixin):
     facility = models.ForeignKey(
         "Facility", on_delete=models.CASCADE, related_name="consultations"
     )
-    deprecated_covid_category = models.CharField(
-        choices=COVID_CATEGORY_CHOICES,
-        max_length=8,
-        default=None,
-        blank=True,
-        null=True,
-    )  # Deprecated
     category = models.CharField(
         choices=CATEGORY_CHOICES, max_length=13, blank=False, null=True
     )
@@ -231,16 +222,12 @@ class PatientConsultation(PatientBaseModel, ConsultationRelatedPermissionMixin):
         "encounter_date": "Date of Admission",
         "deprecated_symptoms_onset_date": "Date of Onset of Symptoms",
         "deprecated_symptoms": "Symptoms at time of consultation",
-        "deprecated_covid_category": "Covid Category",
         "category": "Category",
         "examination_details": "Examination Details",
         "suggestion": "Suggestion",
     }
 
     CSV_MAKE_PRETTY = {
-        "deprecated_covid_category": (
-            lambda x: REVERSE_COVID_CATEGORY_CHOICES.get(x, "-")
-        ),
         "category": lambda x: REVERSE_CATEGORY_CHOICES.get(x, "-"),
         "suggestion": (
             lambda x: PatientConsultation.REVERSE_SUGGESTION_CHOICES.get(x, "-")

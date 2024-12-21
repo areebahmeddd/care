@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404
 
 from care.facility.models import (
     CATEGORY_CHOICES,
-    COVID_CATEGORY_CHOICES,
     PatientBaseModel,
 )
 from care.facility.models.bed import AssetBed
@@ -166,13 +165,6 @@ class DailyRound(PatientBaseModel):
         max_digits=4, decimal_places=2, blank=True, null=True, default=None
     )  # Deprecated
     physical_examination_info = models.TextField(null=True, blank=True)
-    deprecated_covid_category = models.CharField(
-        choices=COVID_CATEGORY_CHOICES,
-        max_length=8,
-        default=None,
-        blank=True,
-        null=True,
-    )  # Deprecated
     patient_category = models.CharField(
         choices=CATEGORY_CHOICES, max_length=13, blank=False, null=True
     )

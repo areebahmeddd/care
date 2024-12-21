@@ -61,7 +61,6 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
 
     class SourceEnum(enum.Enum):
         CARE = 10
-        COVID_TRACKER = 20
         STAY = 30
 
     SourceChoices = [(e.value, e.name) for e in SourceEnum]
@@ -158,14 +157,6 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         verbose_name="Blood Group of Patient",
     )
 
-    contact_with_confirmed_carrier = models.BooleanField(
-        default=False, verbose_name="Confirmed Contact with a Covid19 Carrier"
-    )
-    contact_with_suspected_carrier = models.BooleanField(
-        default=False, verbose_name="Suspected Contact with a Covid19 Carrier"
-    )
-    estimated_contact_date = models.DateTimeField(null=True, blank=True)
-
     past_travel = models.BooleanField(
         default=False,
         verbose_name="Travelled to Any Foreign Countries in the last 28 Days",
@@ -198,9 +189,6 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         default="",
         blank=True,
         verbose_name="Already pescribed medication if any",
-    )
-    has_SARI = models.BooleanField(  # noqa: N815
-        default=False, verbose_name="Does the Patient Suffer from SARI"
     )
 
     is_antenatal = models.BooleanField(
@@ -366,10 +354,6 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
     # IDSP Requirements End
 
     # Vaccination Fields
-    is_vaccinated = models.BooleanField(
-        default=False,
-        verbose_name="Is the Patient Vaccinated Against COVID-19",
-    )
     number_of_doses = models.PositiveIntegerField(
         default=0,
         null=False,
@@ -384,17 +368,6 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         max_length=15,
     )
 
-    covin_id = models.CharField(
-        max_length=15,
-        default=None,
-        null=True,
-        blank=True,
-        verbose_name="COVID-19 Vaccination ID",
-    )
-    last_vaccinated_date = models.DateTimeField(
-        null=True, blank=True, verbose_name="Date Last Vaccinated"
-    )
-
     # Extras
     cluster_name = models.CharField(
         max_length=255,
@@ -403,17 +376,8 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         null=True,
         blank=True,
     )
-    is_declared_positive = models.BooleanField(
-        default=None,
-        null=True,
-        verbose_name="Is Patient Declared Positive",
-    )
-    date_declared_positive = models.DateTimeField(
-        null=True, blank=True, verbose_name="Date Patient is Declared Positive"
-    )
 
     # Permission Scopes
-
     assigned_to = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -665,8 +629,6 @@ class PatientContactDetails(models.Model):
         LIVE_IN_SAME_HOUSEHOLD = 4
         # Close contact within 3ft (1m) of the confirmed case without precautions.
         CLOSE_CONTACT_WITHOUT_PRECAUTION = 5
-        # Passenger of the aeroplane with a confirmed COVID -19 passenger for more than 6 hours.
-        CO_PASSENGER_AEROPLANE = 6
         # Health care workers and other contacts who had full PPE while handling the +ve case
         HEALTH_CARE_WITH_PPE = 7
         # Shared the same space(same class for school/worked in same room/similar and not having a high risk exposure
