@@ -845,18 +845,6 @@ class PatientFilterTestCase(TestUtils, APITestCase):
             res.json()["patient_no"],
         )
 
-    def test_invalid_covin_id_param(self):
-        self.client.force_authenticate(user=self.user)
-
-        # Test invalid covin_id length > 15 characters
-        invalid_covin_id = "A" * 16
-        res = self.client.get(self.get_base_url() + f"?covin_id={invalid_covin_id}")
-        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn(
-            "Ensure this value has at most 15 characters (it has 16).",
-            res.json()["covin_id"],
-        )
-
 
 class DischargePatientFilterTestCase(TestUtils, APITestCase):
     @classmethod

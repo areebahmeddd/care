@@ -51,7 +51,6 @@ from care.facility.api.serializers.patient_icmr import PatientICMRSerializer
 from care.facility.api.viewsets.mixins.history import HistoryMixin
 from care.facility.models import (
     CATEGORY_CHOICES,
-    COVID_CATEGORY_CHOICES,
     DISCHARGE_REASON_CHOICES,
     FACILITY_TYPES,
     BedTypeChoices,
@@ -121,10 +120,6 @@ class PatientFilterSet(filters.FilterSet):
     )
     age_max = filters.NumberFilter(
         field_name="age", lookup_expr="lte", validators=[MinValueValidator(0)]
-    )
-    deprecated_covid_category = filters.ChoiceFilter(
-        field_name=f"{last_consultation_field}__deprecated_covid_category",
-        choices=COVID_CATEGORY_CHOICES,
     )
     category = filters.ChoiceFilter(
         method="filter_by_category",
@@ -234,7 +229,6 @@ class PatientFilterSet(filters.FilterSet):
     )
 
     # Vaccination Filters
-    covin_id = filters.CharFilter(field_name="covin_id", max_length=15)
     is_vaccinated = filters.BooleanFilter(field_name="is_vaccinated")
     number_of_doses = filters.NumberFilter(
         field_name="number_of_doses",

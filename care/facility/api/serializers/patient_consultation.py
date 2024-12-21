@@ -25,7 +25,6 @@ from care.facility.api.serializers.encounter_symptom import (
 from care.facility.api.serializers.facility import FacilityBasicInfoSerializer
 from care.facility.models import (
     CATEGORY_CHOICES,
-    COVID_CATEGORY_CHOICES,
     Facility,
     PatientRegistration,
     Prescription,
@@ -78,9 +77,6 @@ class PatientConsultationSerializer(serializers.ModelSerializer):
         source="suggestion",
     )
 
-    deprecated_covid_category = ChoiceField(
-        choices=COVID_CATEGORY_CHOICES, required=False
-    )
     category = ChoiceField(choices=CATEGORY_CHOICES, required=True)
 
     referred_to_object = FacilityBasicInfoSerializer(

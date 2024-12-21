@@ -26,10 +26,6 @@ BASE_ROOM_TYPES = [
     (1, "General Bed"),
     (10, "ICU"),
     (20, "Ventilator"),
-    (30, "Covid Beds"),
-    (100, "Covid Ventilators"),
-    (110, "Covid ICU"),
-    (120, "Covid Oxygen beds"),
     (150, "Oxygen beds"),
 ]
 
@@ -111,15 +107,12 @@ FACILITY_TYPES = [
     # 950, "Corona Testing Labs" # Change from "Corona Testing Labs" to "Govt Labs"
     # Use 10xx for Corona Care Center
     # 1000, "Corona Care Centre" # Change from "Corona Care Centre" to "Other"
-    (1010, "COVID-19 Domiciliary Care Center"),
     # Use 11xx for First Line Treatment Centre
     (1100, "First Line Treatment Centre"),
     # Use 12xx for Second Line Treatment Center
     (1200, "Second Line Treatment Center"),
     # Use 13xx for Shifting Centers
     (1300, "Shifting Centre"),
-    # Use 14xx for Covid Management Centers.
-    (1400, "Covid Management Center"),
     # Use 15xx for Resource Management Centers.
     (1500, "Request Approving Center"),
     (1510, "Request Fulfilment Center"),
