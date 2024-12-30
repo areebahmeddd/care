@@ -344,7 +344,7 @@ care/media/*
 
 test_db
 
-celerybeat-schedule
+celerybeat-schedule*
 
 secrets.sh
 
