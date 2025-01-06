@@ -1,6 +1,11 @@
 from django.db import models
 
-from care.facility.models import FacilityBaseModel, pretty_boolean, reverse_choices
+from care.facility.models import (
+    FacilityBaseModel,
+    PatientRegistration,
+    pretty_boolean,
+    reverse_choices,
+)
 from care.users.models import User
 from care.utils.models.validators import mobile_or_landline_number_validator
 
@@ -15,7 +20,11 @@ RESOURCE_STATUS_CHOICES = (
 )
 
 RESOURCE_CATEGORY_CHOICES = (
-    (100, "OXYGEN"),
+    (10, "PATIENT_CARE"),
+    (20, "COMFORT_DEVICES"),
+    (30, "MEDICINES"),
+    (40, "FINANCIAL"),
+    (100, "OTHERS"),
     (200, "SUPPLIES"),
 )
 
@@ -65,14 +74,7 @@ class ResourceRequest(FacilityBaseModel):
     category = models.IntegerField(
         choices=RESOURCE_CATEGORY_CHOICES, default=100, null=False, blank=False
     )
-    sub_category = models.IntegerField(
-        choices=RESOURCE_SUB_CATEGORY_CHOICES, default=1000, null=False, blank=False
-    )
     priority = models.IntegerField(default=None, null=True, blank=True)
-
-    # Quantity
-    requested_quantity = models.IntegerField(default=0)
-    assigned_quantity = models.IntegerField(default=0)
 
     is_assigned_to_user = models.BooleanField(default=False)
     assigned_to = models.ForeignKey(
@@ -94,6 +96,14 @@ class ResourceRequest(FacilityBaseModel):
         related_name="resource_request_last_edited_by",
     )
 
+    related_patient = models.ForeignKey(
+        PatientRegistration,
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+        blank=True,
+    )
+
     CSV_MAPPING = {
         "created_date": "Created Date",
         "modified_date": "Modified Date",
@@ -105,10 +115,7 @@ class ResourceRequest(FacilityBaseModel):
         "reason": "Reason for Shifting",
         "title": "Title",
         "category": "Category",
-        "sub_category": "Sub Category",
         "priority": "Priority",
-        "requested_quantity": "Requested Quantity",
-        "assigned_quantity": "Assigned Quantity",
         "assigned_to__username": "Assigned User Username",
     }
 

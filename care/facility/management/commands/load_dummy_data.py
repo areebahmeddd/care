@@ -50,7 +50,6 @@ class Command(BaseCommand):
                 self.BASE_URL + "users.json",
                 self.BASE_URL + "facility.json",
             )
-            management.call_command("populate_investigations")
         except Exception as e:
             raise CommandError(e) from e
         finally:

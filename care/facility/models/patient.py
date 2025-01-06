@@ -3,6 +3,7 @@ from datetime import date
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Case, F, Func, JSONField, Value, When
@@ -36,7 +37,6 @@ from care.facility.models.patient_base import (
     REVERSE_ROUTE_TO_FACILITY_CHOICES,
 )
 from care.facility.models.patient_consultation import PatientConsultation
-from care.facility.static_data.icd11 import get_icd11_diagnoses_objects_by_ids
 from care.users.models import GENDER_CHOICES, REVERSE_GENDER_CHOICES, User
 from care.utils.models.base import BaseManager, BaseModel
 from care.utils.models.validators import mobile_or_landline_number_validator
@@ -46,6 +46,17 @@ class RationCardCategory(models.TextChoices):
     NON_CARD_HOLDER = "NO_CARD", _("Non-card holder")
     BPL = "BPL", _("BPL")
     APL = "APL", _("APL")
+
+
+class MobilityStatus(models.TextChoices):
+    UNKNOWN = "UNKNOWN", _("Unknown")
+    INDEPENDENTLY_MOBILE = "INDEPENDENTLY_MOBILE", _("Independently Mobile")
+    INDEPENDENTLY_MOBILE_WITH_ILLNESS = (
+        "INDEPENDENTLY_MOBILE_WITH_ILLNESS",
+        _("Independently Mobile with Illness"),
+    )
+    HOME_BOUND = "HOME_BOUND", _("Home Bound")
+    BED_BOUND = "BED_BOUND", _("Bed Bound")
 
 
 class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
@@ -146,6 +157,14 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         choices=RationCardCategory, null=True, max_length=8
     )
 
+    mobility_status = models.CharField(
+        null=False,
+        max_length=50,
+        choices=MobilityStatus,
+        default=MobilityStatus.UNKNOWN,
+        verbose_name="Mobility Status of Patient",
+    )
+
     is_medical_worker = models.BooleanField(
         default=False, verbose_name="Is the Patient a Medical Worker"
     )
@@ -204,7 +223,7 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
     )
 
     is_antenatal = models.BooleanField(
-        default=None, verbose_name="Does the patient require Prenatal Care ?"
+        default=None, null=True, verbose_name="Does the patient require Prenatal Care ?"
     )
     last_menstruation_start_date = models.DateField(
         default=None, null=True, verbose_name="Last Menstruation Start Date"
@@ -422,6 +441,12 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         related_name="root_patient_assigned_to",
     )
 
+    geo_organization = models.ForeignKey(
+        "emr.Organization", on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    organization_cache = ArrayField(models.IntegerField(), default=list)
+
     history = HistoricalRecords(excluded_fields=["meta_info"])
 
     objects = BaseManager()
@@ -459,7 +484,7 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         if self.district is not None:
             self.state = self.district.state
 
-        if self.date_of_birth:
+        if self.date_of_birth and not self.year_of_birth:
             self.year_of_birth = self.date_of_birth.year
 
         self.date_of_receipt_of_information = (
@@ -551,7 +576,7 @@ class PatientRegistration(PatientBaseModel, PatientPermissionMixin):
         return self.strftime("%H:%M")
 
     def format_diagnoses(self):
-        diagnoses = get_icd11_diagnoses_objects_by_ids(self)
+        diagnoses = []
         return ", ".join([diagnosis["label"] for diagnosis in diagnoses])
 
     CSV_MAKE_PRETTY = {

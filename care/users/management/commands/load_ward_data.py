@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 ),
             ).first()
 
-        for f in sorted(Path.glob(f"{folder}/*.json")):
+        for f in sorted(Path(folder).glob("*.json")):
             with Path(f).open() as data_f:
                 data = json.load(data_f)
                 wards = data.pop("wards", None)

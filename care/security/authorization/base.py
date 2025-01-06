@@ -1,4 +1,7 @@
-from care.security.permissions.base import PermissionController
+import inspect
+
+from care.emr.models.organization import FacilityOrganizationUser, OrganizationUser
+from care.security.models import RolePermission
 
 
 class PermissionDeniedError(Exception):
@@ -21,23 +24,42 @@ class AuthorizationHandler:
     actions = []
     queries = []
 
-    def check_permission(self, user, obj):
-        if not PermissionController.has_permission(user, obj):
-            raise PermissionDeniedError
+    def check_permission_in_organization(self, permissions, user, orgs=None):
+        if user.is_superuser:
+            return True
+        roles = self.get_role_from_permissions(permissions)
+        filters = {"role_id__in": roles, "user": user}
+        if orgs:
+            filters["organization_id__in"] = orgs
+        return OrganizationUser.objects.filter(**filters).exists()
 
-        return PermissionController.has_permission(user, obj)
+    def check_permission_in_facility_organization(
+        self, permissions, user, orgs=None, facility=None
+    ):
+        if user.is_superuser:
+            return True
+        roles = self.get_role_from_permissions(permissions)
+        filters = {"role_id__in": roles, "user": user}
+        if orgs:
+            filters["organization_id__in"] = orgs
+        if facility:
+            filters["organization__facility"] = facility
+        return FacilityOrganizationUser.objects.filter(**filters).exists()
+
+    def get_role_from_permissions(self, permissions):
+        # TODO Cache this endpoint
+        return list(
+            set(
+                RolePermission.objects.filter(
+                    permission__slug__in=permissions
+                ).values_list("role_id", flat=True)
+            )
+        )
 
 
 class AuthorizationController:
     """
-    This class abstracts all security related operations in care
-    This includes Checking if A has access to resource X,
-    Filtering query-sets for list based operations and so on.
-    Security Controller implicitly caches all cachable operations and expects it to be invalidated.
-
-    SecurityController maintains a list of override Classes, When present,
-    The override classes are invoked first and then the predefined classes.
-    The overridden classes can choose to call the next function in the hierarchy if needed.
+    Someone please write this because i honestly forgot what this does
     """
 
     override_authz_controllers: list[
@@ -46,43 +68,34 @@ class AuthorizationController:
     # Override Security Controllers will be defined from plugs
     internal_authz_controllers: list[AuthorizationHandler] = []
 
-    cache = {}
+    cache = {"actions": {}, "queries": {}}
 
     @classmethod
     def build_cache(cls):
         for controller in (
             cls.internal_authz_controllers + cls.override_authz_controllers
         ):
-            for action in controller.actions:
-                if "actions" not in cls.cache:
-                    cls.cache["actions"] = {}
-                cls.cache["actions"][action] = [
-                    *cls.cache["actions"].get(action, []),
-                    controller,
-                ]
+            for method in inspect.getmembers(controller(), predicate=inspect.ismethod):
+                if method[0].startswith("can_"):
+                    cls.cache["actions"][method[0]] = controller
+                if method[0].startswith("get_"):
+                    cls.cache["queries"][method[0]] = controller
 
     @classmethod
-    def get_action_controllers(cls, action):
-        return cls.cache["actions"].get(action, [])
-
-    @classmethod
-    def check_action_permission(cls, action, user, obj):
-        """
-        TODO: Add Caching and capability to remove cache at both user and obj level
-        """
-        if not cls.cache:
+    def call(cls, item, *args, **kwargs):
+        if not cls.cache["actions"]:
             cls.build_cache()
-        controllers = cls.get_action_controllers(action)
-        for controller in controllers:
-            permission_fn = getattr(controller, action)
-            result, _continue = permission_fn(user, obj)
-            if not _continue:
-                return result
-            if not result:
-                return result
-        return True
+        if item.startswith("can_"):
+            if item in cls.cache["actions"]:
+                return getattr(cls.cache["actions"][item](), item)(*args, **kwargs)
+            raise ValueError("Invalid Action")
+        if item.startswith("get_"):
+            if item in cls.cache["queries"]:
+                return getattr(cls.cache["queries"][item](), item)(*args, **kwargs)
+            raise ValueError("Invalid Query")
+        raise ValueError("Invalid Item")
 
     @classmethod
-    def register_internal_controller(cls, controller: AuthorizationHandler):
+    def register_internal_controller(cls, controller):
         # TODO : Do some deduplication Logic
         cls.internal_authz_controllers.append(controller)

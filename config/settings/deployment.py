@@ -9,6 +9,8 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration, ignore_logger
 from sentry_sdk.integrations.redis import RedisIntegration
 
+from care.utils.jwks.generate_jwk import get_jwks_from_file
+
 from .base import *  # noqa
 from .base import APP_VERSION, DATABASES, TEMPLATES, env
 
@@ -118,9 +120,14 @@ if SENTRY_DSN := env("SENTRY_DSN", default=""):
     ignore_logger("django.security.DisallowedHost")
 
 # SMS API KEYS
-SNS_ACCESS_KEY = env("SNS_ACCESS_KEY")
-SNS_SECRET_KEY = env("SNS_SECRET_KEY")
-SNS_REGION = "ap-south-1"
+SNS_ACCESS_KEY = env("SNS_ACCESS_KEY", default="")
+SNS_SECRET_KEY = env("SNS_SECRET_KEY", default="")
+SNS_REGION = env("SNS_REGION", default="ap-south-1")
+SNS_ROLE_BASED_MODE = env.bool("SNS_ROLE_BASED_MODE", default=False)
 
 # open id connect
-JWKS = JsonWebKey.import_key_set(json.loads(base64.b64decode(env("JWKS_BASE64"))))
+JWKS = JsonWebKey.import_key_set(
+    json.loads(
+        base64.b64decode(env("JWKS_BASE64", default=get_jwks_from_file(BASE_DIR)))  # noqa F405
+    )
+)

@@ -15,9 +15,7 @@ def rand_pass(size):
     if not settings.USE_SMS:
         return "45612"
 
-    return "".join(
-        secrets.choice(string.ascii_uppercase + string.digits) for _ in range(size)
-    )
+    return "".join(secrets.choice(string.digits) for _ in range(size))
 
 
 class PatientMobileOTPSerializer(serializers.ModelSerializer):

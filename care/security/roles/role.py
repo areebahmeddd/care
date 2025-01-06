@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from care.security.permissions.base import PermissionContext
-
 
 @dataclass
 class Role:
@@ -11,30 +9,50 @@ class Role:
 
     name: str
     description: str
-    context: PermissionContext
 
 
+VOLUNTEER_ROLE = Role(
+    name="Volunteer",
+    description="Volunteer at some facility",
+)
 DOCTOR_ROLE = Role(
     name="Doctor",
-    description="Some Description Here",
-    context=PermissionContext.FACILITY,
-)  # TODO : Clean description
+    description="Doctor at some facility",
+)
+NURSE_ROLE = Role(
+    name="Nurse",
+    description="Nurse at some facility",
+)
 STAFF_ROLE = Role(
     name="Staff",
-    description="Some Description Here",
-    context=PermissionContext.FACILITY,
-)  # TODO : Clean description
-ADMIN_ROLE = Role(
+    description="Staff at some facility",
+)
+GEO_ADMIN = Role(
+    name="Geo Admin",
+    description="Administrator restricted with geographical boundaries",
+)
+FACILITY_ADMIN_ROLE = Role(
     name="Facility Admin",
-    description="Some Description Here",
-    context=PermissionContext.FACILITY,
-)  # TODO : Clean description
+    description="Administrator of a facility, associated to the person creating the facility.",
+)
+ADMIN_ROLE = Role(
+    name="Admin",
+    description="Administrator",
+)
 
 
 class RoleController:
     override_roles = []
     # Override Permission Controllers will be defined from plugs
-    internal_roles = [DOCTOR_ROLE, STAFF_ROLE]
+    internal_roles = [
+        DOCTOR_ROLE,
+        STAFF_ROLE,
+        NURSE_ROLE,
+        GEO_ADMIN,
+        FACILITY_ADMIN_ROLE,
+        ADMIN_ROLE,
+        VOLUNTEER_ROLE,
+    ]
 
     @classmethod
     def get_roles(cls):
@@ -48,18 +66,18 @@ class RoleController:
             "Volunteer": STAFF_ROLE,
             "StaffReadOnly": STAFF_ROLE,
             "Staff": STAFF_ROLE,
-            "NurseReadOnly": STAFF_ROLE,
-            "Nurse": STAFF_ROLE,
+            "NurseReadOnly": NURSE_ROLE,
+            "Nurse": NURSE_ROLE,
             "Doctor": DOCTOR_ROLE,
             "Reserved": DOCTOR_ROLE,
-            "WardAdmin": STAFF_ROLE,
-            "LocalBodyAdmin": ADMIN_ROLE,
-            "DistrictLabAdmin": ADMIN_ROLE,
-            "DistrictReadOnlyAdmin": ADMIN_ROLE,
-            "DistrictAdmin": ADMIN_ROLE,
-            "StateLabAdmin": ADMIN_ROLE,
-            "StateReadOnlyAdmin": ADMIN_ROLE,
-            "StateAdmin": ADMIN_ROLE,
+            "WardAdmin": GEO_ADMIN,
+            "LocalBodyAdmin": GEO_ADMIN,
+            "DistrictLabAdmin": GEO_ADMIN,
+            "DistrictReadOnlyAdmin": GEO_ADMIN,
+            "DistrictAdmin": GEO_ADMIN,
+            "StateLabAdmin": GEO_ADMIN,
+            "StateReadOnlyAdmin": GEO_ADMIN,
+            "StateAdmin": GEO_ADMIN,
         }
         return mapping[old_role]
 

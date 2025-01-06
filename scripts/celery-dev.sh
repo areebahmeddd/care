@@ -8,7 +8,6 @@ set -euo pipefail
 
 python manage.py migrate --noinput
 python manage.py compilemessages -v 0
-python manage.py load_redis_index
 
 
 watchmedo \

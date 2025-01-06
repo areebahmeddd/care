@@ -19,11 +19,17 @@ def send_sms(phone_numbers, message, many=False):
             if settings.DEBUG:
                 logger.error("Invalid Phone Number %s", phone)
             continue
-        client = boto3.client(
-            "sns",
-            aws_access_key_id=settings.SNS_ACCESS_KEY,
-            aws_secret_access_key=settings.SNS_SECRET_KEY,
-            region_name=settings.SNS_REGION,
-        )
+        if settings.SNS_ROLE_BASED_MODE:
+            client = boto3.client(
+                "sns",
+                region_name=settings.SNS_REGION,
+            )
+        else:
+            client = boto3.client(
+                "sns",
+                aws_access_key_id=settings.SNS_ACCESS_KEY,
+                aws_secret_access_key=settings.SNS_SECRET_KEY,
+                region_name=settings.SNS_REGION,
+            )
         client.publish(PhoneNumber=phone, Message=message)
     return True

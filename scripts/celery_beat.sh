@@ -1,14 +1,22 @@
 #!/bin/bash
 printf "celery-beat" > /tmp/container-role
 
-set -euo pipefail
+set -eo pipefail
+
+if [ -z "${DATABASE_URL}" ]; then
+  export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+fi
+
+if [ -z "${REDIS_URL}" ]; then
+  export REDIS_URL="rediss://:${REDIS_AUTH_TOKEN}@${REDIS_HOST}:${REDIS_PORT}/${REDIS_DATABASE}?ssl_cert_reqs=none"
+fi
+
 
 ./wait_for_db.sh
 ./wait_for_redis.sh
 
 python manage.py migrate --noinput
 python manage.py compilemessages -v 0
-python manage.py load_redis_index
 
 touch /tmp/healthy
 

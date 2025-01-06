@@ -47,7 +47,6 @@ from care.facility.api.serializers.patient import (
     PatientSearchSerializer,
     PatientTransferSerializer,
 )
-from care.facility.api.serializers.patient_icmr import PatientICMRSerializer
 from care.facility.api.viewsets.mixins.history import HistoryMixin
 from care.facility.models import (
     CATEGORY_CHOICES,
@@ -69,7 +68,11 @@ from care.facility.models.icd11_diagnosis import (
     ConditionVerificationStatus,
 )
 from care.facility.models.notification import Notification
-from care.facility.models.patient import PatientNotesEdit, RationCardCategory
+from care.facility.models.patient import (
+    MobilityStatus,
+    PatientNotesEdit,
+    RationCardCategory,
+)
 from care.facility.models.patient_base import (
     DISEASE_STATUS_DICT,
     NewDischargeReasonEnum,
@@ -131,6 +134,7 @@ class PatientFilterSet(filters.FilterSet):
         choices=CATEGORY_CHOICES,
     )
     ration_card_category = filters.ChoiceFilter(choices=RationCardCategory.choices)
+    mobility_status = filters.ChoiceFilter(choices=MobilityStatus.choices)
 
     def filter_by_category(self, queryset, name, value):
         if value:
@@ -516,8 +520,6 @@ class PatientViewSet(
     def get_serializer_class(self):
         if self.action == "list":
             return PatientListSerializer
-        if self.action == "icmr_sample":
-            return PatientICMRSerializer
         if self.action == "transfer":
             return PatientTransferSerializer
         return self.serializer_class

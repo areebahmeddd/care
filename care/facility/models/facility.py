@@ -9,12 +9,16 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from simple_history.models import HistoricalRecords
 
+from care.emr.models import FacilityOrganization
+from care.emr.models.organization import FacilityOrganizationUser
 from care.facility.models import FacilityBaseModel, reverse_choices
 from care.facility.models.facility_flag import FacilityFlag
 from care.facility.models.mixins.permissions.facility import (
     FacilityPermissionMixin,
     FacilityRelatedPermissionMixin,
 )
+from care.security.models import RoleModel
+from care.security.roles.role import FACILITY_ADMIN_ROLE
 from care.users.models import District, LocalBody, State, Ward
 from care.utils.models.base import BaseModel
 from care.utils.models.validators import mobile_or_landline_number_validator
@@ -60,6 +64,16 @@ FEATURE_CHOICES = [
     (4, "Neonatal care"),
     (5, "Operation theater"),
     (6, "Blood Bank"),
+    (7, "Emergency Services"),
+    (8, "Inpatient Services"),
+    (9, "Outpatient Services"),
+    (10, "Intensive Care Units"),
+    (11, "Pharmacy"),
+    (12, "Rehabilitation Services"),
+    (13, "Home Care Services"),
+    (14, "Psychosocial Support"),
+    (15, "Respite Care"),
+    (16, "Daycare Programs"),
 ]
 
 
@@ -125,9 +139,12 @@ FACILITY_TYPES = [
     (1510, "Request Fulfilment Center"),
     # Use 16xx for War Rooms.
     (1600, "District War Room"),
+    (3000, "Non Governmental Organization"),
+    (4000, "Community Based Organization"),
 ]
 
 REVERSE_FACILITY_TYPES = reverse_choices(FACILITY_TYPES)
+REVERSE_REVERSE_FACILITY_TYPES = {v: k for k, v in REVERSE_FACILITY_TYPES.items()}
 
 DOCTOR_TYPES = [
     (1, "General Medicine"),
@@ -215,6 +232,7 @@ def check_if_spoke_is_not_ancestor(base_id: int, spoke_id: int):
 
 class Facility(FacilityBaseModel, FacilityPermissionMixin):
     name = models.CharField(max_length=1000, blank=False, null=False)
+    description = models.TextField(blank=True, null=False)
     is_active = models.BooleanField(default=True)
     verified = models.BooleanField(default=False)
     facility_type = models.IntegerField(choices=FACILITY_TYPES)
@@ -240,6 +258,20 @@ class Facility(FacilityBaseModel, FacilityPermissionMixin):
         District, on_delete=models.SET_NULL, null=True, blank=True
     )
     state = models.ForeignKey(State, on_delete=models.SET_NULL, null=True, blank=True)
+
+    geo_organization = models.ForeignKey(
+        "emr.Organization", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    geo_organization_cache = ArrayField(models.IntegerField(), default=list)
+
+    default_internal_organization = models.ForeignKey(
+        "emr.FacilityOrganization",
+        on_delete=models.SET_NULL,
+        related_name="default_facilities",
+        null=True,
+        blank=True,
+    )
+    internal_organization_cache = ArrayField(models.IntegerField(), default=list)
 
     oxygen_capacity = models.IntegerField(default=0)
     type_b_cylinders = models.IntegerField(default=0)
@@ -271,16 +303,42 @@ class Facility(FacilityBaseModel, FacilityPermissionMixin):
     )
     middleware_address = models.CharField(null=True, default=None, max_length=200)
 
+    is_public = models.BooleanField(default=False)
+
     class Meta:
         verbose_name_plural = "Facilities"
 
     def read_cover_image_url(self):
         if self.cover_image_url:
+            if settings.FACILITY_CDN:
+                return f"{settings.FACILITY_CDN}/{self.cover_image_url}"
             return f"{settings.FACILITY_S3_BUCKET_EXTERNAL_ENDPOINT}/{settings.FACILITY_S3_BUCKET}/{self.cover_image_url}"
         return None
 
     def __str__(self):
         return f"{self.name}"
+
+    def sync_cache(self):
+        self.geo_organization_cache = []
+        if self.geo_organization:
+            self.geo_organization_cache = [
+                *self.geo_organization.parent_cache,
+                self.geo_organization.id,
+            ]
+
+        facility_organizations = FacilityOrganization.objects.filter(facility=self)
+        cache = []
+        for facility_organization in facility_organizations:
+            cache = [
+                *cache,
+                *facility_organization.parent_cache,
+                facility_organization.id,
+            ]
+        cache = list(set(cache))
+        self.internal_organization_cache = cache
+        super().save(
+            update_fields=["geo_organization_cache", "internal_organization_cache"]
+        )
 
     def save(self, *args, **kwargs) -> None:
         """
@@ -296,9 +354,24 @@ class Facility(FacilityBaseModel, FacilityPermissionMixin):
         super().save(*args, **kwargs)
 
         if is_create:
+            facility_organization = FacilityOrganization.objects.create(
+                org_type="root",
+                name="Administration",
+                system_generated=True,
+                facility=self,
+            )
+            self.default_internal_organization = facility_organization
+            super().save(update_fields=["default_internal_organization"])
+            FacilityOrganizationUser.objects.create(
+                organization=facility_organization,
+                user=self.created_by,
+                role=RoleModel.objects.get(name=FACILITY_ADMIN_ROLE.name),
+            )
             FacilityUser.objects.create(
                 facility=self, user=self.created_by, created_by=self.created_by
             )
+
+        self.sync_cache()
 
     @transaction.atomic
     def delete(self, *args):

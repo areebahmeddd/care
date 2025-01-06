@@ -1,12 +1,10 @@
 from celery import current_app
 from celery.schedules import crontab
-from django.conf import settings
 
 from care.facility.tasks.asset_monitor import check_asset_status
 from care.facility.tasks.cleanup import delete_old_notifications
 from care.facility.tasks.location_monitor import check_location_status
 from care.facility.tasks.plausible_stats import capture_goals
-from care.facility.tasks.redis_index import load_redis_index
 
 
 @current_app.on_after_finalize.connect
@@ -26,11 +24,6 @@ def setup_periodic_tasks(sender, **kwargs):
         crontab(hour="0", minute="0"),
         capture_goals.s(),
         name="capture_goals",
-    )
-    sender.add_periodic_task(
-        crontab(hour="*", minute="0"),
-        load_redis_index.s(),
-        name="load_redis_index",
     )
     sender.add_periodic_task(
         crontab(minute="*/30"),

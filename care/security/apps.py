@@ -7,5 +7,5 @@ class SecurityConfig(AppConfig):
     verbose_name = _("Security Management")
 
     def ready(self):
-        # import care.security.signals  # noqa F401
+        # import care.security.signals
         pass

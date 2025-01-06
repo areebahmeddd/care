@@ -25,6 +25,9 @@ pull:
 up:
 	docker compose -f docker-compose.yaml -f $(docker_config_file) up -d --wait
 
+build-up-live:
+	docker compose -f docker-compose.yaml -f $(docker_config_file) up --build
+
 down:
 	docker compose -f docker-compose.yaml -f $(docker_config_file) down
 
@@ -66,7 +69,8 @@ load-db:
 	docker compose exec db sh -c "pg_restore -U postgres --clean --if-exists -d care /tmp/care_db.dump"
 
 reset-db:
-	docker compose exec backend bash -c "python manage.py reset_db --noinput"
+	docker compose exec db sh -c "dropdb -U postgres care -f"
+	docker compose exec db sh -c "createdb -U postgres care"
 
 ruff-all:
 	ruff check .

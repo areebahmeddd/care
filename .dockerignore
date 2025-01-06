@@ -4,3 +4,5 @@ htmlcov
 staticfiles
 .coverage
 care/media/
+celerybeat-schedule
+celerybeat*

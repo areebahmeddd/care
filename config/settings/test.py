@@ -70,10 +70,7 @@ LOGGING = {
             "level": "ERROR",
         }
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "ERROR",
-    },
+    "root": {"level": "INFO", "handlers": ["console"]},
 }
 
 CELERY_TASK_ALWAYS_EAGER = True

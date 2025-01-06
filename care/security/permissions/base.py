@@ -1,33 +1,18 @@
-import enum
-from dataclasses import dataclass
-
 from care.security.models import RoleAssociation, RolePermission
-
-
-class PermissionContext(enum.Enum):
-    GENERIC = "GENERIC"
-    FACILITY = "FACILITY"
-    ASSET = "ASSET"
-    LOCATION = "LOCATION"
-
-
-@dataclass
-class Permission:
-    """
-    This class abstracts a permission
-    """
-
-    name: str
-    description: str
-    context: PermissionContext
-    roles: list
+from care.security.permissions.encounter import EncounterPermissions
+from care.security.permissions.facility import FacilityPermissions
+from care.security.permissions.facility_organization import (
+    FacilityOrganizationPermissions,
+)
+from care.security.permissions.organization import OrganizationPermissions
+from care.security.permissions.patient import PatientPermissions
+from care.security.permissions.questionnaire import QuestionnairePermissions
+from care.security.permissions.user import UserPermissions
+from care.security.permissions.user_schedule import UserSchedulePermissions
 
 
 class PermissionHandler:
     pass
-
-
-from care.security.permissions.facility import FacilityPermissions  # noqa: E402
 
 
 class PermissionController:
@@ -38,7 +23,17 @@ class PermissionController:
 
     override_permission_handlers = []
     # Override Permission Controllers will be defined from plugs
-    internal_permission_handlers = [FacilityPermissions]
+
+    internal_permission_handlers = [
+        FacilityPermissions,
+        QuestionnairePermissions,
+        OrganizationPermissions,
+        FacilityOrganizationPermissions,
+        EncounterPermissions,
+        PatientPermissions,
+        UserPermissions,
+        UserSchedulePermissions,
+    ]
 
     cache = {}
 

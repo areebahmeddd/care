@@ -9,10 +9,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from care.facility.api.viewsets.open_id import PublicJWKsView
-from care.facility.api.viewsets.patient_consultation import (
-    dev_preview_discharge_summary,
-)
+from care.emr.api.viewsets.encounter import dev_preview_discharge_summary
 from care.users.api.viewsets.change_password import ChangePasswordView
 from care.users.reset_password_views import (
     ResetPasswordCheck,
@@ -20,10 +17,6 @@ from care.users.reset_password_views import (
     ResetPasswordRequestToken,
 )
 from config import api_router
-from config.health_views import (
-    MiddlewareAssetAuthenticationVerifyView,
-    MiddlewareAuthenticationVerifyView,
-)
 
 from .auth_views import AnnotatedTokenVerifyView, TokenObtainPairView, TokenRefreshView
 from .views import app_version, home_view, ping
@@ -66,11 +59,11 @@ urlpatterns = [
     ),
     path("api/v1/", include(api_router.urlpatterns)),
     # Health check urls
-    path("middleware/verify", MiddlewareAuthenticationVerifyView.as_view()),
-    path("middleware/verify-asset", MiddlewareAssetAuthenticationVerifyView.as_view()),
+    # path("middleware/verify", MiddlewareAuthenticationVerifyView.as_view()),
+    # path("middleware/verify-asset", MiddlewareAssetAuthenticationVerifyView.as_view()),
     path("health/", include("healthy_django.urls", namespace="healthy_django")),
     # OpenID Connect
-    path(".well-known/jwks.json", PublicJWKsView.as_view(), name="jwks-json"),
+    # path(".well-known/jwks.json", PublicJWKsView.as_view(), name="jwks-json"),
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),
 ]
 
@@ -95,7 +88,7 @@ if settings.DEBUG:
         ),
         path("500/", default_views.server_error),
         path(
-            "preview_discharge_summary/<str:consultation_id>/",
+            "preview_discharge_summary/<str:encounter_id>/",
             dev_preview_discharge_summary,
         ),
     ]

@@ -3,6 +3,7 @@ Base settings to build other settings files upon.
 """
 
 import logging
+import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from healthy_django.healthcheck.django_database import DjangoDatabaseHealthCheck
 
 from care.utils.csp import config as csp_config
 from plug_config import manager
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +131,7 @@ LOCAL_APPS = [
     "care.facility",
     "care.users",
     "care.audit_log",
+    "care.emr",
 ]
 
 PLUGIN_APPS = manager.get_apps()
@@ -278,7 +282,7 @@ X_FRAME_OPTIONS = "DENY"
 CSRF_TRUSTED_ORIGINS = env.json("CSRF_TRUSTED_ORIGINS", default=[])
 
 # https://github.com/adamchainz/django-cors-headers#cors_allowed_origin_regexes-sequencestr--patternstr
-# CORS_URLS_REGEX = r"^/api/.*$"  # noqa: ERA001
+# CORS_URLS_REGEX = r"^/api/.*$"
 
 # EMAIL
 # ------------------------------------------------------------------------------
@@ -304,11 +308,11 @@ EMAIL_SUBJECT_PREFIX = env("DJANGO_EMAIL_SUBJECT_PREFIX", default="[Care]")
 # ADMIN
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
-# SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)  # noqa F405
+# SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-# ADMINS = [("""👪""", "admin@ohc.network")]  # noqa: ERA001
+# ADMINS = [("""👪""", "admin@ohc.network")]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
-# MANAGERS = ADMINS  # noqa: ERA001
+# MANAGERS = ADMINS
 
 # Django Admin URL.
 ADMIN_URL = env("DJANGO_ADMIN_URL", default="admin")
@@ -367,8 +371,9 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
+        "care.security.utils.permission_class.CareAuthentication",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "DEFAULT_PAGINATION_CLASS": "care.utils.pagination.care_pagination.CareLimitOffsetPagination",
     "PAGE_SIZE": 14,
     "SEARCH_PARAM": "search_text",
     "DEFAULT_SCHEMA_CLASS": "care.utils.schema.AutoSchema",
@@ -405,7 +410,7 @@ if USE_TZ:
     # https://docs.celeryq.dev/en/latest/userguide/configuration.html#std:setting-timezone
     CELERY_TIMEZONE = TIME_ZONE
 # https://docs.celeryq.dev/en/latest/userguide/configuration.html#std:setting-broker_url
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
 # https://docs.celeryq.dev/en/latest/userguide/configuration.html#std:setting-result_backend
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # https://docs.celeryq.dev/en/latest/userguide/configuration.html#std:setting-accept_content
@@ -614,7 +619,7 @@ FACILITY_S3_BUCKET_EXTERNAL_ENDPOINT = env(
         BUCKET_EXTERNAL_ENDPOINT if BUCKET_ENDPOINT else FACILITY_S3_BUCKET_ENDPOINT
     ),
 )
-
+FACILITY_CDN = env("FACILITY_CDN", default=None)
 # for setting the shifting mode
 PEACETIME_MODE = env.bool("PEACETIME_MODE", default=True)
 
@@ -642,3 +647,7 @@ PLAUSIBLE_AUTH_TOKEN = env("PLAUSIBLE_AUTH_TOKEN", default="")
 
 # Timeout for middleware request (in seconds)
 MIDDLEWARE_REQUEST_TIMEOUT = env.int("MIDDLEWARE_REQUEST_TIMEOUT", 20)
+
+SNOWSTORM_DEPLOYMENT_URL = env(
+    "SNOWSTORM_DEPLOYMENT_URL", default="http://165.22.211.144/fhir"
+)

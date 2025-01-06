@@ -78,6 +78,7 @@ class ResourceFilterSet(filters.FilterSet):
     priority = filters.NumberFilter(field_name="priority")
     emergency = filters.BooleanFilter(field_name="emergency")
     title = filters.CharFilter(field_name="title", lookup_expr="icontains")
+    related_patient = filters.UUIDFilter(field_name="related_patient__external_id")
 
 
 class ResourceRequestViewSet(
@@ -108,6 +109,7 @@ class ResourceRequestViewSet(
         "assigned_to",
         "created_by",
         "last_edited_by",
+        "related_patient",
     )
     ordering_fields = [
         "id",

@@ -1,7 +1,7 @@
 {% load static %}
 {% load filters static %}
-{% load prescription_tags %}
-{% load data_formatting_tags %}
+{% load data_formatting_extras %}
+{% load discharge_summary_utils %}
 
 #set page("a4",margin: 40pt)
 #set text(font: "DejaVu Sans",size: 10pt,hyphenate: true)
@@ -19,7 +19,7 @@
     stroke: frame(rgb("21222C")),
 )
 
-#let facility_name="{{patient.facility.name}}"
+#let facility_name="{{encounter.facility.name}}"
 
 #align(center, text(24pt,weight: "bold")[= #facility_name])
 
@@ -29,12 +29,8 @@
     columns: (auto, 1fr),
     row-gutter: 1em,
     align: (left, right),
-    {% if consultation.suggestion == "A" %}
-    text(size: 15pt)[= Patient Discharge Summary],
-    {% else %}
-    text(size: 15pt)[= Patient Summary],
-    {% endif %}
-    grid.cell(align: right, rowspan: 2)[#scale(x:90%, y:90%, reflow: true)[#image("{{ logo_path }}")]],
+    text(size: 15pt)[= {{ encounter.encounter_class|discharge_summary_display }}],
+    grid.cell(align: right, rowspan: 2)[#image("{{ logo_path }}", width: 32%)],
     [#text(fill: mygray, weight: 500)[*Created on {{date}}*]]
 )
 
@@ -47,9 +43,9 @@
     columns: (1fr, 1fr, 1fr, 1fr),
     row-gutter: 1.5em,
     [Full name:], "{{patient.name}}",
-    [Gender:], "{{patient.get_gender_display }}",
+    [Gender:], "{{patient.gender|field_name_to_label }}",
     [Age:], "{{patient.get_age }}",
-    [Blood Group:], "{{patient.blood_group }}",
+    [Blood Group:], "{{patient.blood_group|field_name_to_label }}",
     [Phone Number:], "{{patient.phone_number }}",
     [Ration Card Category:], "{{patient.get_ration_card_category_display|format_empty_data }}",
     [Address:], grid.cell(colspan: 3, "{{patient.address }}"),
@@ -57,332 +53,145 @@
 
 #line(length: 100%, stroke: mygray)
 
-{% if consultation.suggestion == "A" %}
-#align(left, text(18pt)[== Admission Details])
-{% else %}
-#align(left, text(18pt)[== Patient Details])
-{% endif %}
+#align(left, text(18pt)[== Visit Details])
 #text("")
 #grid(
     columns: (1.1fr, 2fr),
     row-gutter: 1.2em,
     align: (left),
-    [Route to Facility:], "{{ consultation.get_route_to_facility_display | field_name_to_label  }}",
-    {% if consultation.suggestion == "A" %}
-        [Admitted To:], "{{ admitted_to|format_to_sentence_case|format_empty_data }}",
+    [Route to Facility:], "{{ encounter.hospitalization.admit_source|admit_source_display }}",
+    {% if encounter.encounter_class == "imp" %}
+        [Admitted To:], "{{ encounter.facility.name|format_empty_data }}", // TODO: show bed info instead of facility name
         [Duration of Admission:], "{{admission_duration|format_empty_data}}",
-        [Date of admission:], "{{ consultation.encounter_date  }}",
-        [IP No:], "{{ consultation.patient_no  }}",
-        [Weight:],
-        {% if consultation.weight == 0.0 %}
-            "N/A"
-        {% else %}
-            "{{ consultation.weight }} kg"
-        {% endif %},
-        [Height:],
-        {% if consultation.height == 0.0 %}
-            "N/A"
-        {% else %}
-            "{{ consultation.height }} cm"
-        {% endif %},
-        [Diagnosis at admission:],[#stack(
-            dir: ttb,
-            spacing: 10pt,
-            {% for diagnose in diagnoses %}
-                "{{ diagnose.label  }} ({{diagnose.verification_status }})",
+        [Date of admission:], "{{ encounter.period.start|parse_iso_datetime|format_empty_data }}",
+        [IP No:], "{{ encounter.external_identifier }}",
+    {% else %}
+        [OP No:], "{{ encounter.external_identifier  }}",
+    {% endif %}
+    [Diagnosis:],[#stack(
+        dir: ttb,
+        spacing: 10pt,
+        {% for diagnose in diagnoses %}
+            "{{ diagnose.code.display  }} ({{diagnose.verification_status }})",
+        {% endfor %}
+    )],
+    [Principal Diagnosis:],
+    {% if principal_diagnosis %}
+        "{{ principal_diagnosis.code.display }}",
+    {% else %}
+        "N/A",
+    {% endif %}
+    [Symptoms:], [#stack(
+        dir: ttb,
+        spacing: 10pt,
+        {% if symptoms %}
+            {% for symptom in symptoms %}
+                "{{ symptom.code.display }}",
             {% endfor %}
-        )],
-        [Reason for admission:],[#stack(
+        {% else %}
+            "Asymptomatic"
+        {% endif %}
+    )],
+    [Reported Allergies:],
+    {% if allergies %}
+        [#stack(
             dir: ttb,
             spacing: 10pt,
-            {% if primary_diagnoses %}
-                {% for diagnose in primary_diagnoses %}
-                    "{{ diagnose.label }}",
-                {% endfor %}
-            {% else %}
-                "N/A"
-            {% endif %}
-        )],
-        [Symptoms at admission], [#stack(
-            dir: ttb,
-            spacing: 10pt,
-            {% if symptoms %}
-                {% for symptom in symptoms %}
-                    {% if symptom.symptom == 9 %}
-                        "{{ symptom.other_symptom }}",
-                    {% else %}
-                        "{{ symptom.get_symptom_display }}",
-                    {% endif %}
-                {% endfor %}
-            {% else %}
-                "Asymptomatic"
-            {% endif %}
+            {% for allergy in allergies %}
+                "{{ allergy.code.display }}",
+            {% endfor %}
         )],
     {% else %}
-        [OP No:], "{{ consultation.patient_no  }}",
-        [Weight:],
-        {% if consultation.weight == 0.0 %}
-            "N/A"
-        {% else %}
-            "{{ consultation.weight }} kg"
-        {% endif %},
-        [Height:],
-        {% if consultation.height == 0.0 %}
-            "N/A"
-        {% else %}
-            "{{ consultation.height }} cm"
-        {% endif %},
-        [Diagnosis:],[#stack(
-            dir: ttb,
-            spacing: 10pt,
-            {% for diagnose in diagnoses %}
-                "{{ diagnose.label  }} ({{diagnose.verification_status }})",
-            {% endfor %}
-        )],
-        [Principal Diagnosis:],[#stack(
-            dir: ttb,
-            spacing: 10pt,
-            {% if primary_diagnoses %}
-                {% for diagnose in primary_diagnoses %}
-                    "{{ diagnose.label }}",
-                {% endfor %}
-            {% else %}
-                "N/A"
-            {% endif %}
-        )],
-        [Symptoms], [#stack(
-            dir: ttb,
-            spacing: 10pt,
-            {% if symptoms %}
-                {% for symptom in symptoms %}
-                    {% if symptom.symptom == 9 %}
-                        "{{ symptom.other_symptom }}",
-                    {% else %}
-                        "{{ symptom.get_symptom_display }}",
-                    {% endif %}
-                {% endfor %}
-            {% else %}
-                "Asymptomatic"
-            {% endif %}
-        )],
+        "N/A",
     {% endif %}
-    [Reported Allergies:], "{{ patient.allergies |format_empty_data }}",
 )
 
-#text("\n")
+#text("")
 
 #align(center, [#line(length: 40%, stroke: mygray)])
 
-{% if medical_history.0.get_disease_display != "NO" %}
+// TODO: add comorbidity info
 
-#align(left, text(14pt,weight: "bold",)[=== Medication History:])
-
-#table(
-    columns: (1.5fr, 3.5fr),
-    inset: 10pt,
-    align: horizon,
-    table.header(
-        [*COMORBIDITY*], [*DETAILS*],
-    ),
-    {% for disease in medical_history %}
-        "{{disease.get_disease_display }}", "{{disease.details|format_empty_data }}",
-    {% endfor %}
-)
-#align(center, [#line(length: 40%, stroke: mygray,)])
-{% endif %}
-{% if consultation.suggestion != 'DD' %}
-    {% if patient.disease_status == 2 or prescriptions or consultation.investigation or consultation.procedure or investigations or samples %}
-        #align(left, text(18pt,)[== Treatment Summary])
-        #text("")
-    {% endif %}
-
-    {% if patient.disease_status == 2 %}
-        #grid(
-            columns: (1fr, 1fr),
-            gutter: 1.4em,
-            align: (left),
-            [COVID Disease Status:], [Positive],
-            {% if patient.date_of_result %}
-                [Test Result Date:], "{{ patient.date_of_result.date  }}",
-            {% endif %}
-            [Vaccinated against COVID:], [
-                {% if patient.is_vaccinated %}
-                    Yes
-                {% else %}
-                    No
+{% if medication_requests %}
+    #align(left, text(14pt,weight: "bold",)[=== Medication Requests:])
+    #table(
+        columns: (1fr,),
+        inset: 10pt,
+        align: horizon,
+        stroke: 1pt,
+        table.header(
+            align(center, text([*MEDICATION REQUESTS*]))
+        ),
+        {% for medication in medication_requests %}
+            [#grid(
+                columns: (1fr, 3fr),
+                row-gutter: 1.2em,
+                align: (left),
+                [Name:], "{{ medication.meta.medication.display }} ({{ medication.meta.medication.system }} {{ medication.meta.medication.code }})",
+                [Dosage:], "{{ medication|medication_dosage_display|format_empty_data }}",
+                {% if medication.created_by %}
+                    [Prescribed By:], "{{ medication.created_by.fullname|default:medication.created_by.username }}",
                 {% endif %}
-            ],
-        )
-    {% endif %}
+                [Date:], "{{ medication.authored_on|default:medication.created_date }}",
+            )],
+        {% endfor %}
+    )
 
-    {% if prescriptions %}
-        #align(left, text(14pt,weight: "bold",)[=== Medication Administered:])
-        #table(
-            columns: (1fr,),
-            inset: 10pt,
-            align: horizon,
-            stroke: 1pt,
-            table.header(
-                align(center, text([*MEDICATION DETAILS*]))
-            ),
-            {% for prescription in prescriptions %}
-                [#grid(
-                    columns: (0.5fr, 9.5fr),
-                    row-gutter: 1.2em,
-                    align: (left),
-                    "{{ forloop.counter  }}",
-                    "{{ prescription|format_prescription  }}",
-                )],
-            {% endfor %}
-        )
+    #align(center, [#line(length: 40%, stroke: mygray)])
 
-        #align(center, [#line(length: 40%, stroke: mygray,)])
-    {% endif %}
+{% endif %}
 
-    {% if consultation.investigation %}
-        #align(left, text(14pt,weight: "bold",)[=== Investigations Conducted:])
 
-        #table(
-            columns: (1.5fr, 1fr, 1.5fr),
-            inset: 10pt,
-            align: horizon,
-            table.header(
-                [*TYPE*], [*TIME*], [*NOTES*]
-            ),
-            {% for investigation in consultation.investigation %}
-                "{{ investigation.type|join:", "  }}",
-                "{% if investigation.repetitive %}every {{ investigation.frequency  }}{% else %}{{ investigation.time|date:"DATETIME_FORMAT"  }}{% endif %}",
-                "{{ investigation.notes |format_empty_data }}",
-            {% endfor %}
-        )
-
-        #align(center, [#line(length: 40%, stroke: mygray,)])
-    {% endif %}
-
-    {% if consultation.procedure %}
-        #align(left, text(14pt,weight: "bold",)[=== Procedures Conducted:])
-
-        #table(
-            columns: (1fr, 1fr, 2fr),
-            inset: 10pt,
-            align: horizon,
-            table.header(
-                [*PROCEDURE*], [*TIME*], [*NOTES*]
-            ),
-            {% for procedure in consultation.procedure %}
-                "{{ procedure.procedure  }}",
-                "{% if procedure.repetitive %} every {{procedure.frequency }} {% else %} {{procedure.time|parse_datetime }} {% endif %}",
-                "{{ procedure.notes |format_empty_data }}",
-            {% endfor %}
-        )
-
-        #align(center, [#line(length: 40%, stroke: mygray,)])
-    {% endif %}
-
-    {% if samples %}
-        #align(left, text(14pt,weight: "bold",)[=== Lab Reports:])
-
-        #table(
-            columns: (1fr, 1fr, 1fr,1fr),
-            inset: 10pt,
-            align: horizon,
-            table.header(
-                [*REQUESTED ON*], [*SAMPLE TYPE*], [*LABEL*],[*RESULT*],
-            ),
-            {% for sample in samples %}
-                "{{ sample.created_date  }}", "{{ sample.get_sample_type_display  }}", "{{ sample.icmr_label  }}","{{ sample.get_result_display  }}",
-            {% endfor %}
-        )
-
-        #align(center, [#line(length: 40%, stroke: mygray,)])
-    {% endif %}
-
-    {% if investigations %}
-        #align(left, text(14pt,weight: "bold")[=== Investigation History:])
-        #table(
-            columns: (1fr,),
-            inset: 10pt,
-            align: horizon,
-            stroke: 1pt,
-            table.header(
-                align(center, text([*INVESTIGATION DETAILS*]))
-            ),
-            {% for investigation in investigations %}
+{% if observations %}
+    #align(left, text(14pt,weight: "bold")[=== Observations:])
+    #table(
+        columns: (1fr,),
+        inset: 10pt,
+        align: horizon,
+        stroke: 1pt,
+        table.header(
+            align(center, text([*OBSERVATION DETAILS*]))
+        ),
+        {% for observation in observations %}
+            {% if observation.main_code.display and observation|observation_value_display %}
                 [#grid(
                     columns: (1fr, 3fr),
                     row-gutter: 1.2em,
                     align: (left),
-                    [Group:], "{{ investigation.investigation.groups.first  }}",
-                    [Name:], "{{ investigation.investigation.name  }}",
-                    [Result:], [{% if investigation.value %}{{ investigation.value  }}{% else %}{{ investigation.notes  }}{% endif %}],
-                    [Range:], [{% if investigation.investigation.min_value and investigation.investigation.max_value %}
-                        {{ investigation.investigation.min_value  }} - {{ investigation.investigation.max_value  }}
-                        {% else %}
-                        -
-                        {% endif %}
-                        {% if investigation.investigation.unit %}
-                        {{ investigation.investigation.unit  }}
-                        {% endif %}
-                    ],
-                    [Date:], "{{ investigation.created_date  }}",
+                    [Name:], "{{ observation.main_code.display }} ({{ observation.main_code.system }} {{ observation.main_code.code }})",
+                    [Value:], "{{ observation|observation_value_display|field_name_to_label|format_empty_data }}",
+                    {% if observation.body_site %}
+                        [Body Site:], "{{ observation.body_site.display }}",
+                    {% endif %}
+                    [Date:], "{{ observation.effective_datetime  }}",
+                    [Data Entered By:], "{{ observation.data_entered_by.fullname|default:observation.data_entered_by.username }}",
+                    {% if observation.note %}
+                        [Note:], "{{ observation.note }}",
+                    {% endif %}
                 )],
-            {% endfor %}
-        )
+            {% endif %}
+        {% endfor %}
+    )
 
-        #align(center, [#line(length: 40%, stroke: mygray)])
-    {% endif %}
-
+    #align(center, [#line(length: 40%, stroke: mygray)])
 {% endif %}
 
-#align(left, text(18pt,)[== Discharge Summary])
-#grid(
-    columns: (1fr,3fr),
-    row-gutter: 1.2em,
-    align: (left),
-    [Discharge Date:], "{{consultation.discharge_date|format_empty_data }}",
-    [Discharge Reason:], "{{consultation.get_new_discharge_reason_display|format_to_sentence_case|format_empty_data }}",
-    [Discharge Advice:], "{{consultation.discharge_notes|format_empty_data }}",
-)
 
-{% if consultation.new_discharge_reason == 1 %}
-    {% if discharge_prescriptions %}
-        #align(left, text(14pt,weight: "bold",)[=== Discharge Prescription :])
-        #table(
-            columns: (1fr,),
-            inset: 10pt,
-            align: horizon,
-            stroke: 1pt,
-            table.header(
-                align(center, text([*MEDICATION DETAILS*]))
-            ),
-            {% for prescription in discharge_prescriptions %}
-                [#grid(
-                    columns: (0.5fr, 9.5fr),
-                    row-gutter: 1.2em,
-                    align: (left),
-                    "{{ forloop.counter  }}",
-                    "{{ prescription|format_prescription  }}",
-                )],
-            {% endfor %}
-        )
-    {% endif %}
+{% if encounter.hospitalization and encounter.hospitalization.discharge_disposition %}
+    #align(left, text(18pt,)[== Discharge Summary])
+    #grid(
+        columns: (1fr,3fr),
+        row-gutter: 1.2em,
+        align: (left),
+        [Discharge Date:], "{{ encounter.period.end|parse_iso_datetime|format_empty_data }}",
+        [Discharge Disposition:], "{{ encounter.hospitalization.discharge_disposition|discharge_disposition_display }}",
+    )
 
-{% elif consultation.new_discharge_reason == 2 %}
-{% elif consultation.new_discharge_reason == 3 %}
-{% elif consultation.new_discharge_reason == 4 %}
+    #align(center, [#line(length: 40%, stroke: mygray)])
 {% endif %}
 
-#text("")
-
-#align(right)[#text(12pt,fill: mygray)[*Treating Physician* :] #text(10pt,weight: "bold")[{% if consultation.treating_physician %}
-    {{ consultation.treating_physician.first_name  }} {{ consultation.treating_physician.last_name  }}
-{% else %}
-    -
-{% endif %}]]
 
 {% if files %}
-    #align(center, [#line(length: 40%, stroke: mygray,)])
-
     #align(left, text(18pt,)[== Annexes])
     #align(left, text(14pt,weight: "bold",)[=== Uploaded Files:])
 
@@ -394,8 +203,8 @@
             [*UPLOADED AT*], [*NAME*],
         ),
         {% for file in files %}
-            "{{file.modified_date }}", "{{file.name }}",
+            "{{file.modified_date }}", text(hyphenate: true)["{{file.name }}"],
         {% endfor %}
     )
 {% endif %}
-#line(length: 100%, stroke: mygray)
+// #line(length: 100%, stroke: mygray)

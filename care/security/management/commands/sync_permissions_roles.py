@@ -35,11 +35,9 @@ class Command(BaseCommand):
             # Create, update roles and delete old roles
             RoleModel.objects.all().update(temp_deleted=True)
             for role in roles:
-                role_obj = RoleModel.objects.filter(
-                    name=role.name, context=role.context.value
-                ).first()
+                role_obj = RoleModel.objects.filter(name=role.name).first()
                 if not role_obj:
-                    role_obj = RoleModel(name=role.name, context=role.context.value)
+                    role_obj = RoleModel(name=role.name)
                 role_obj.description = role.description
                 role_obj.is_system = True
                 role_obj.temp_deleted = False

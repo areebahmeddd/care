@@ -17,7 +17,6 @@ from care.facility.api.serializers.consultation_diagnosis import (
     ConsultationCreateDiagnosisSerializer,
     ConsultationDiagnosisSerializer,
 )
-from care.facility.api.serializers.daily_round import DailyRoundSerializer
 from care.facility.api.serializers.encounter_symptom import (
     EncounterCreateSymptomSerializer,
     EncounterSymptomSerializer,
@@ -81,7 +80,7 @@ class PatientConsultationSerializer(serializers.ModelSerializer):
     deprecated_covid_category = ChoiceField(
         choices=COVID_CATEGORY_CHOICES, required=False
     )
-    category = ChoiceField(choices=CATEGORY_CHOICES, required=True)
+    category = ChoiceField(choices=CATEGORY_CHOICES, required=False)
 
     referred_to_object = FacilityBasicInfoSerializer(
         source="referred_to", read_only=True
@@ -149,7 +148,6 @@ class PatientConsultationSerializer(serializers.ModelSerializer):
 
     last_edited_by = UserBaseMinimumSerializer(read_only=True)
     created_by = UserBaseMinimumSerializer(read_only=True)
-    last_daily_round = DailyRoundSerializer(read_only=True)
 
     current_bed = ConsultationBedSerializer(read_only=True)
 
@@ -344,8 +342,8 @@ class PatientConsultationSerializer(serializers.ModelSerializer):
         else:
             raise ValidationError({"route_to_facility": "This field is required"})
 
-        create_diagnosis = validated_data.pop("create_diagnoses")
-        create_symptoms = validated_data.pop("create_symptoms")
+        create_diagnosis = validated_data.pop("create_diagnoses", [])
+        create_symptoms = validated_data.pop("create_symptoms", [])
 
         action = validated_data.pop("action", -1)
         review_interval = validated_data.get("review_interval", -1)
@@ -403,32 +401,34 @@ class PatientConsultationSerializer(serializers.ModelSerializer):
                 > consultation.encounter_date
             ):
                 consultation.is_readmission = True
-
-            ConsultationDiagnosis.objects.bulk_create(
-                [
-                    ConsultationDiagnosis(
+            if create_diagnosis:
+                ConsultationDiagnosis.objects.bulk_create(
+                    [
+                        ConsultationDiagnosis(
+                            consultation=consultation,
+                            diagnosis_id=obj["diagnosis"].id,
+                            is_principal=obj["is_principal"],
+                            verification_status=obj["verification_status"],
+                            created_by=user,
+                        )
+                        for obj in create_diagnosis
+                    ]
+                )
+            if create_symptoms:
+                EncounterSymptom.objects.bulk_create(
+                    EncounterSymptom(
                         consultation=consultation,
-                        diagnosis_id=obj["diagnosis"].id,
-                        is_principal=obj["is_principal"],
-                        verification_status=obj["verification_status"],
+                        symptom=obj.get("symptom"),
+                        onset_date=obj.get("onset_date"),
+                        cure_date=obj.get("cure_date"),
+                        clinical_impression_status=obj.get(
+                            "clinical_impression_status"
+                        ),
+                        other_symptom=obj.get("other_symptom") or "",
                         created_by=user,
                     )
-                    for obj in create_diagnosis
-                ]
-            )
-
-            EncounterSymptom.objects.bulk_create(
-                EncounterSymptom(
-                    consultation=consultation,
-                    symptom=obj.get("symptom"),
-                    onset_date=obj.get("onset_date"),
-                    cure_date=obj.get("cure_date"),
-                    clinical_impression_status=obj.get("clinical_impression_status"),
-                    other_symptom=obj.get("other_symptom") or "",
-                    created_by=user,
+                    for obj in create_symptoms
                 )
-                for obj in create_symptoms
-            )
 
             if bed and consultation.suggestion == SuggestionChoices.A:
                 consultation_bed = ConsultationBed(
@@ -663,12 +663,6 @@ class PatientConsultationSerializer(serializers.ModelSerializer):
                 raise ValidationError(
                     {"review_interval": ["This field value is must be greater than 0."]}
                 )
-
-        if not self.instance and "create_diagnoses" not in validated:
-            raise ValidationError({"create_diagnoses": ["This field is required."]})
-
-        if not self.instance and "create_symptoms" not in validated:
-            raise ValidationError({"create_symptoms": ["This field is required."]})
 
         return validated
 

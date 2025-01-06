@@ -35,7 +35,10 @@ class FacilityPermissionMixin(BasePermissionMixin):
                     and state == request.user.state
                 )
             )
-        except Exception:
+        except Exception as e:
+            import logging
+
+            logging.info(e)
             return False
 
     @staticmethod

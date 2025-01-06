@@ -85,7 +85,12 @@ class AuditLogMiddleware:
         response: HttpResponse = self.get_response(request)
         self.save(request, response)
 
-        current_user_str = f"{request.user.id}|{request.user}" if request.user else None
+        if getattr(request.user, "is_alternative_login", False):
+            current_user_str = f"patient|{request.user.phone_number[-4:]}"
+        else:
+            current_user_str = (
+                f"{request.user.id}|{request.user}" if request.user else None
+            )
 
         logger.info(
             "%s %s %s User:[%s]",

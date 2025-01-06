@@ -89,7 +89,7 @@ class Command(BaseCommand):
             # Hence, those records can be ignored using the `ignore_conflicts` flag
             LocalBody.objects.bulk_create(local_body_objs, ignore_conflicts=True)
 
-        for counter, f in enumerate(sorted(Path.glob(f"{folder}/*.json"))):
+        for counter, f in enumerate(sorted(Path(folder).glob("*.json"))):
             with Path(f).open() as data_f:
                 data = json.load(data_f)
                 data.pop("wards", None)

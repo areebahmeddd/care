@@ -36,6 +36,8 @@ class StateViewSet(
     serializer_class = StateSerializer
     queryset = State.objects.all().order_by("id")
     pagination_class = PaginataionOverrideClass
+    authentication_classes = []
+    permission_classes = []
 
     @extend_schema(tags=["places"])
     @method_decorator(cache_page(3600))
@@ -70,6 +72,8 @@ class DistrictViewSet(
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = DistrictFilterSet
     pagination_class = PaginataionOverrideClass
+    authentication_classes = []
+    permission_classes = []
 
     @extend_schema(tags=["places"])
     @method_decorator(cache_page(3600))
@@ -124,6 +128,8 @@ class LocalBodyViewSet(
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = LocalBodyFilterSet
     pagination_class = PaginataionOverrideClass
+    authentication_classes = []
+    permission_classes = []
 
 
 class WardFilterSet(filters.FilterSet):
@@ -158,3 +164,5 @@ class WardViewSet(
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = WardFilterSet
     pagination_class = PaginataionOverrideClass
+    authentication_classes = []
+    permission_classes = []
