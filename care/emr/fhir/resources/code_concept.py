@@ -5,7 +5,7 @@ from care.emr.fhir.utils import parse_fhir_parameter_output
 
 
 class CodeConceptResource(ResourceManger):
-    allowed_properties = ["system", "code"]
+    allowed_properties = ["system", "code", "property"]
     resource = "CodeConcept"
 
     def serialize_lookup(self, result):
@@ -23,9 +23,9 @@ class MinimalCodeConcept(BaseModel):
     display: str
     system: str
     code: str
+    designation: list | None = None
 
 
 class CodeConcept(MinimalCodeConcept):
     name: str
     property: dict
-    designation: dict

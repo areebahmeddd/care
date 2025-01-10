@@ -640,11 +640,6 @@ BACKEND_DOMAIN = env("BACKEND_DOMAIN", default="localhost:9000")
 APP_VERSION = env("APP_VERSION", default="unknown")
 
 IS_PRODUCTION = False
-
-PLAUSIBLE_HOST = env("PLAUSIBLE_HOST", default="")
-PLAUSIBLE_SITE_ID = env("PLAUSIBLE_SITE_ID", default="")
-PLAUSIBLE_AUTH_TOKEN = env("PLAUSIBLE_AUTH_TOKEN", default="")
-
 # Timeout for middleware request (in seconds)
 MIDDLEWARE_REQUEST_TIMEOUT = env.int("MIDDLEWARE_REQUEST_TIMEOUT", 20)
 

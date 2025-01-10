@@ -39,6 +39,11 @@ class CareAPITestBase(APITestCase):
             )
         return role
 
+    def create_patient(self, **kwargs):
+        from care.emr.models import Patient
+
+        return baker.make(Patient, **kwargs)
+
     def attach_role_organization_user(self, organization, user, role):
         OrganizationUser.objects.create(organization=organization, user=user, role=role)
 

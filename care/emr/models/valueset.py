@@ -30,15 +30,16 @@ class ValueSet(EMRBaseModel):
             systems[system]["exclude"].append(exclude.model_dump(exclude_defaults=True))
         return systems
 
-    def search(self, search="", count=10):
+    def search(self, search="", count=10, display_language=None):
         systems = self.create_composition()
         results = []
         for system in systems:
-            results.extend(
-                ValueSetResource()
-                .filter(search=search, count=count, **systems[system])
-                .search()
+            temp = ValueSetResource().filter(
+                search=search, count=count, **systems[system]
             )
+            if display_language:
+                temp = temp.filter(display_language=display_language)
+            results.extend(temp.search())
         return results
 
     def lookup(self, code):

@@ -62,4 +62,6 @@ class QuestionnaireResponseViewSet(EMRModelReadOnlyViewSet):
         if "questionnaire_slugs" in self.request.GET:
             questionnaire_slugs = self.request.GET.get("questionnaire_slugs").split(",")
             queryset = queryset.filter(questionnaire__slug__in=questionnaire_slugs)
+        if "only_unstructured" in self.request.GET:
+            queryset = queryset.filter(structured_response_type__isnull=True)
         return queryset

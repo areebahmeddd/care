@@ -1,5 +1,3 @@
-import logging
-
 from django.urls import reverse
 from polyfactory.factories.pydantic_factory import ModelFactory
 from rest_framework import status
@@ -50,7 +48,8 @@ class UserTestCreate(CareAPITestBase):
             name=UserTypeRoleMapping[new_user.user_type.value].value.name,
             is_system=True,
         )
-        logging.info(UserTypeRoleMapping[new_user.user_type.value].value.name)
         self.client.force_authenticate(user=user)
-        response = self.client.post(self.base_url, new_user.dict(), format="json")
+        response = self.client.post(
+            self.base_url, new_user.model_dump(mode="json"), format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -21,3 +21,4 @@ from .patient_icmr import *  # noqa
 from .prescription import *  # noqa
 from .resources import *  # noqa
 from .shifting import *  # noqa
+from .stats import *  # noqa

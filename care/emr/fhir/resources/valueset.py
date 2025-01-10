@@ -14,11 +14,14 @@ class ValueSetFilterValidation(BaseModel):
 
 
 class ValueSetResource(ResourceManger):
-    allowed_properties = ["include", "exclude", "search", "count"]
+    allowed_properties = ["include", "exclude", "search", "count", "display_language"]
 
     def serialize(self, result):
         return MinimalCodeConcept(
-            system=result["system"], code=result["code"], display=result["display"]
+            system=result["system"],
+            code=result["code"],
+            display=result["display"],
+            designation=result.get("designation", []),
         )
 
     def validate_filter(self):
@@ -51,11 +54,19 @@ class ValueSetResource(ResourceManger):
 
     def search(self):
         parameters = []
-        for key in self._filters:
-            if key == "search" and self._filters[key]:
-                parameters.append({"name": "filter", "valueString": self._filters[key]})
-            if key == "count":
-                parameters.append({"name": "count", "valueInteger": self._filters[key]})
+        if self._filters.get("search"):
+            parameters.append(
+                {"name": "filter", "valueString": self._filters["search"]}
+            )
+        if "count" in self._filters:
+            parameters.append({"name": "count", "valueInteger": self._filters["count"]})
+        if "display_language" in self._filters:
+            parameters.append(
+                {
+                    "name": "displayLanguage",
+                    "valueString": self._filters["display_language"],
+                }
+            )
         parameters.append(
             {
                 "name": "valueSet",
@@ -68,6 +79,7 @@ class ValueSetResource(ResourceManger):
                 },
             }
         )
+        parameters.append({"name": "includeDesignations", "valueBoolean": True})
         request_json = {"resourceType": "Parameters", "parameter": parameters}
         full_result = self.query("POST", "ValueSet/$expand", request_json)
         # TODO Add Exception Handling

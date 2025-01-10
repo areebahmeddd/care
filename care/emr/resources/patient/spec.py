@@ -3,7 +3,7 @@ import uuid
 from enum import Enum
 
 from django.utils import timezone
-from pydantic import UUID4, field_validator, model_validator
+from pydantic import UUID4, Field, field_validator, model_validator
 
 from care.emr.models import Organization
 from care.emr.models.patient import Patient
@@ -36,8 +36,8 @@ class PatientBaseSpec(EMRResource):
     id: UUID4 | None = None
     name: str
     gender: GenderChoices
-    phone_number: str
-    emergency_phone_number: str | None = None
+    phone_number: str = Field(max_length=14)
+    emergency_phone_number: str | None = Field(None, max_length=14)
     address: str
     permanent_address: str
     pincode: int

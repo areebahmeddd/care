@@ -70,6 +70,8 @@ class PatientAccess(AuthorizationHandler):
     def can_create_patient(self, user):
         return self.check_permission_in_facility_organization(
             [PatientPermissions.can_create_patient.name], user
+        ) or self.check_permission_in_organization(
+            [PatientPermissions.can_create_patient.name], user
         )
 
     def can_view_clinical_data(self, user, patient):

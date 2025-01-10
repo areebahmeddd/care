@@ -95,7 +95,7 @@ class EncounterListSpec(EncounterSpecBase):
     facility: dict
     status_history: dict
     encounter_class_history: dict
-    created_at: datetime.datetime
+    created_date: datetime.datetime
     modified_date: datetime.datetime
 
     @classmethod

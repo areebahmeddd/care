@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import UUID4, ConfigDict, Field, field_validator, model_validator
 
 from care.emr.fhir.schema.base import Coding
-from care.emr.models import Questionnaire, ValueSet
+from care.emr.models import Questionnaire, QuestionnaireTag, ValueSet
 from care.emr.registries.care_valueset.care_valueset import validate_valueset
 from care.emr.resources.base import EMRResource
 from care.emr.resources.observation.valueset import (
@@ -180,7 +180,7 @@ class Question(QuestionnaireBaseSpec):
         return self
 
 
-class QuestionnaireSpec(QuestionnaireBaseSpec):
+class QuestionnaireWriteSpec(QuestionnaireBaseSpec):
     version: str = Field("1.0", frozen=True, description="Version of the questionnaire")
     slug: str | None = Field(None, min_length=5, max_length=25, pattern=r"^[-\w]+$")
     title: str
@@ -192,7 +192,6 @@ class QuestionnaireSpec(QuestionnaireBaseSpec):
         {}, description="Styling requirements without validation"
     )
     questions: list[Question]
-    organizations: list[UUID4] = Field(min_length=1)
 
     @field_validator("slug")
     @classmethod
@@ -235,8 +234,16 @@ class QuestionnaireSpec(QuestionnaireBaseSpec):
             raise ValueError(err)
         return self
 
+
+class QuestionnaireSpec(QuestionnaireWriteSpec):
+    organizations: list[UUID4] = Field(min_length=1)
+
     def perform_extra_deserialization(self, is_update, obj):
         obj._organizations = self.organizations  # noqa SLF001
+
+
+class QuestionnaireUpdateSpec(QuestionnaireWriteSpec):
+    pass
 
 
 class QuestionnaireReadSpec(QuestionnaireBaseSpec):
@@ -251,11 +258,15 @@ class QuestionnaireReadSpec(QuestionnaireBaseSpec):
     questions: list
     created_by: UserSpec = dict
     updated_by: UserSpec = dict
+    tags: list[dict] = []
 
     @classmethod
     def perform_extra_serialization(cls, mapping, obj):
         mapping["id"] = obj.external_id
-
+        tags = []
+        for tag in obj.tags:
+            tags.append(QuestionnaireTag.get_tag(tag))
+        mapping["tags"] = tags
         if obj.created_by:
             mapping["created_by"] = UserSpec.serialize(obj.created_by)
         if obj.updated_by:
@@ -264,3 +275,26 @@ class QuestionnaireReadSpec(QuestionnaireBaseSpec):
 
 # Add this to handle recursive Question type
 Question.model_rebuild()
+
+
+class QuestionnaireTagSpec(EMRResource):
+    __model__ = QuestionnaireTag
+    id: UUID4 | None = None
+    name: str
+    slug: str
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, slug: str, info):
+        queryset = QuestionnaireTag.objects.filter(slug=slug)
+        context = cls.get_serializer_context(info)
+        if context.get("is_update", False):
+            queryset = queryset.exclude(id=info.context["object"].id)
+        if queryset.exists():
+            err = "Slug must be unique"
+            raise ValueError(err)
+        return slug
+
+    @classmethod
+    def perform_extra_serialization(cls, mapping, obj):
+        mapping["id"] = obj.external_id

@@ -12,7 +12,7 @@ from care.utils.models.validators import mobile_or_landline_number_validator
 
 class Patient(EMRBaseModel):
     name = models.CharField(max_length=200, default="")
-    gender = models.CharField(max_length=10, default="")
+    gender = models.CharField(max_length=35, default="")
 
     phone_number = models.CharField(
         max_length=14, validators=[mobile_or_landline_number_validator], default=""

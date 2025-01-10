@@ -6,7 +6,6 @@ from rest_framework import exceptions, serializers
 from care.emr.models import Organization
 from care.emr.models.organization import FacilityOrganizationUser, OrganizationUser
 from care.emr.resources.organization.spec import OrganizationReadSpec
-from care.emr.resources.role.spec import PermissionSpec
 from care.facility.api.serializers.facility import FacilityBareMinimumSerializer
 from care.facility.models import Facility, FacilityUser
 from care.security.models import RolePermission
@@ -306,9 +305,7 @@ class UserSerializer(SignUpSerializer):
                 "role_id", flat=True
             )
         ).select_related("permission")
-        return [
-            PermissionSpec.serialize(obj.permission).to_json() for obj in permissions
-        ]
+        return [obj.permission.slug for obj in permissions]
 
     def get_facilities(self, user):
         unique_ids = []

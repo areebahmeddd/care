@@ -31,7 +31,7 @@ class ClassChoices(str, Enum):
 
 
 class AdmitSourcesChoices(str, Enum):
-    hosp_trans = "hosp-trans"
+    hosp_trans = "hosp_trans"
     emd = "emd"
     outp = "outp"
     born = "born"
@@ -45,8 +45,8 @@ class AdmitSourcesChoices(str, Enum):
 
 class DischargeDispositionChoices(str, Enum):
     home = "home"
-    alt_home = "alt-home"
-    other_hcf = "other-hcf"
+    alt_home = "alt_home"
+    other_hcf = "other_hcf"
     hosp = "hosp"
     long = "long"
     aadvice = "aadvice"
@@ -59,9 +59,9 @@ class DischargeDispositionChoices(str, Enum):
 
 class DietPreferenceChoices(str, Enum):
     vegetarian = "vegetarian"
-    diary_free = "diary-free"
-    nut_free = "nut-free"
-    gluten_free = "gluten-free"
+    diary_free = "diary_free"
+    nut_free = "nut_free"
+    gluten_free = "gluten_free"
     vegan = "vegan"
     halal = "halal"
     kosher = "kosher"

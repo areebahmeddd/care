@@ -13,6 +13,7 @@ from care.emr.resources.valueset.spec import ValueSetReadSpec, ValueSetSpec
 class ExpandRequest(BaseModel):
     search: str = ""
     count: int = Field(10, gt=0, lt=100)
+    display_language: str = "en-gb"
 
 
 class ValueSetViewSet(EMRModelViewSet):
@@ -42,8 +43,8 @@ class ValueSetViewSet(EMRModelViewSet):
     @extend_schema(request=ExpandRequest, responses={200: None}, methods=["POST"])
     @action(detail=True, methods=["POST"])
     def expand(self, request, *args, **kwargs):
-        request_params = ExpandRequest(**request.data)
-        results = self.get_object().search(**request_params.model_dump())
+        request_params = ExpandRequest(**request.data).model_dump()
+        results = self.get_object().search(**request_params)
         return Response({"results": [result.model_dump() for result in results]})
 
     @extend_schema(request=Coding, responses={200: None}, methods=["POST"])
@@ -59,7 +60,9 @@ class ValueSetViewSet(EMRModelViewSet):
         Coding(**request.data)  # Validate
         result = (
             CodeConceptResource()
-            .filter(code=request.data["code"], system=request.data["system"])
+            .filter(
+                code=request.data["code"], system=request.data["system"], property="*"
+            )
             .get()
         )
         return Response(result)

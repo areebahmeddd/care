@@ -43,8 +43,6 @@ class AllergyIntoleranceOnSetSpec(EMRResource):
     onset_datetime: datetime.datetime = None
     onset_age: int = None
     onset_string: str = None
-    recorded_date: datetime.datetime | None = None
-    last_occurrence: datetime.datetime | None = None
     note: str
 
 
@@ -59,6 +57,8 @@ class AllergyIntoleranceWriteSpec(BaseAllergyIntoleranceSpec):
     verification_status: VerificationStatusChoices
     category: CategoryChoices
     criticality: CriticalityChoices
+    last_occurrence: datetime.datetime | None = None
+    recorded_date: datetime.datetime | None = None
 
     onset: AllergyIntoleranceOnSetSpec = {}
 
@@ -103,6 +103,8 @@ class AllergyIntrolanceSpecRead(BaseAllergyIntoleranceSpec):
     code: Coding
     encounter: UUID4
     onset: AllergyIntoleranceOnSetSpec = dict
+    last_occurrence: datetime.datetime | None = None
+    recorded_date: datetime.datetime | None = None
     created_by: dict = {}
     updated_by: dict = {}
 

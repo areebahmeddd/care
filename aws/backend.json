@@ -276,18 +276,6 @@
           "name": "ABDM_CLIENT_SECRET"
         },
         {
-          "valueFrom": "/care/backend/PLAUSIBLE_HOST",
-          "name": "PLAUSIBLE_HOST"
-        },
-        {
-          "valueFrom": "/care/backend/PLAUSIBLE_SITE_ID",
-          "name": "PLAUSIBLE_SITE_ID"
-        },
-        {
-          "valueFrom": "/care/backend/PLAUSIBLE_AUTH_TOKEN",
-          "name": "PLAUSIBLE_AUTH_TOKEN"
-        },
-        {
           "valueFrom": "/care/backend/JWKS_BASE64",
           "name": "JWKS_BASE64"
         }
