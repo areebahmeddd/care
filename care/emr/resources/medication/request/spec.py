@@ -3,11 +3,11 @@ from enum import Enum
 
 from pydantic import UUID4, BaseModel, Field, field_validator
 
-from care.emr.fhir.schema.base import Coding
 from care.emr.models.encounter import Encounter
 from care.emr.models.medication_request import MedicationRequest
 from care.emr.registries.care_valueset.care_valueset import validate_valueset
 from care.emr.resources.base import EMRResource
+from care.emr.resources.common.coding import Coding
 from care.emr.resources.medication.valueset.additional_instruction import (
     CARE_ADDITIONAL_INSTRUCTION_VALUESET,
 )
@@ -92,7 +92,12 @@ class DoseType(str, Enum):
 
 class DosageQuantity(BaseModel):
     value: float
-    unit: str
+    unit: Coding
+
+
+class TimingQuantity(BaseModel):
+    value: float
+    unit: TimingUnit
 
 
 class DoseRange(BaseModel):
@@ -101,21 +106,21 @@ class DoseRange(BaseModel):
 
 
 class DoseAndRate(BaseModel):
-    type: DoseType | None = None
+    type: DoseType
     dose_range: DoseRange | None = None
     dose_quantity: DosageQuantity | None = None
 
 
 class TimingRepeat(BaseModel):
-    frequency: int | None = None
-    period: float = 1
+    frequency: int
+    period: float
     period_unit: TimingUnit
-    bounds_duration: DosageQuantity | None = None
+    bounds_duration: TimingQuantity
 
 
 class Timing(BaseModel):
-    repeat: TimingRepeat | None = None
-    code: Coding | None = None
+    repeat: TimingRepeat
+    code: Coding
 
 
 class DosageInstruction(BaseModel):
@@ -126,7 +131,7 @@ class DosageInstruction(BaseModel):
     )
     patient_instruction: str | None = None
     timing: Timing | None = None
-    as_needed_boolean: bool | None = None
+    as_needed_boolean: bool
     as_needed_for: Coding | None = Field(
         None, json_schema_extra={"slug": CARE_AS_NEEDED_REASON_VALUESET.slug}
     )
@@ -190,52 +195,34 @@ class DosageInstruction(BaseModel):
         )
 
 
-class BaseMedicationRequestSpec(EMRResource):
+class MedicationRequestResource(EMRResource):
     __model__ = MedicationRequest
     __exclude__ = ["patient", "encounter"]
+
+
+class BaseMedicationRequestSpec(MedicationRequestResource):
     id: UUID4 = None
 
-    status: MedicationRequestStatus = Field(
-        description="Status of the medication request",
-    )
+    status: MedicationRequestStatus
 
-    status_reason: StatusReason | None = Field(
-        None, description="Reason for current status"
-    )
+    status_reason: StatusReason | None = None
 
-    status_changed: datetime = None
+    intent: MedicationRequestIntent
 
-    intent: MedicationRequestIntent = Field(
-        description="Whether this is a proposal, plan, original order, etc.",
-    )
+    category: MedicationRequestCategory
+    priority: MedicationRequestPriority
 
-    category: MedicationRequestCategory = Field(
-        description="Context of medication request",
-    )
-    priority: MedicationRequestPriority = Field(
-        description="Urgency of the request",
-    )
-
-    do_not_perform: bool = Field(
-        description="True if medication is NOT to be given",
-    )
+    do_not_perform: bool
 
     medication: Coding = Field(
-        description="Medication requested, using SNOMED CT coding",
         json_schema_extra={"slug": CARE_MEDICATION_VALUESET.slug},
     )
 
-    encounter: UUID4 = Field(description="Encounter during which request was created")
+    encounter: UUID4
 
-    authored_on: datetime = Field(
-        description="When request was initially authored",
-    )
+    dosage_instruction: list[DosageInstruction] = Field()
 
-    dosage_instruction: list[DosageInstruction] = Field(
-        description="Dosage instructions for the medication",
-    )
-
-    note: str | None = Field(None, description="Additional notes about the request")
+    note: str | None = Field(None)
 
 
 class MedicationRequestSpec(BaseMedicationRequestSpec):
@@ -264,9 +251,15 @@ class MedicationRequestSpec(BaseMedicationRequestSpec):
             obj.patient = obj.encounter.patient
 
 
+class MedicationRequestUpdateSpec(MedicationRequestResource):
+    status: MedicationRequestStatus
+
+
 class MedicationRequestReadSpec(BaseMedicationRequestSpec):
     created_by: UserSpec = dict
     updated_by: UserSpec = dict
+    created_date: datetime
+    modified_date: datetime
 
     @classmethod
     def perform_extra_serialization(cls, mapping, obj):
@@ -277,7 +270,3 @@ class MedicationRequestReadSpec(BaseMedicationRequestSpec):
             mapping["created_by"] = UserSpec.serialize(obj.created_by)
         if obj.updated_by:
             mapping["updated_by"] = UserSpec.serialize(obj.updated_by)
-
-
-class MedicationRequestDiscontinueRequest(BaseModel):
-    status_reason: StatusReason = Field(description="Reason for discontinuation")

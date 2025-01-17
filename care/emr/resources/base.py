@@ -2,9 +2,11 @@ import datetime
 import uuid
 from enum import Enum
 from types import UnionType
-from typing import get_origin
+from typing import Annotated, Union, get_origin
 
+import phonenumbers
 from pydantic import BaseModel
+from pydantic_extra_types.phone_numbers import PhoneNumberValidator
 
 from care.emr.fhir.schema.base import Coding
 
@@ -14,6 +16,7 @@ class EMRResource(BaseModel):
     __exclude__ = []
     meta: dict = {}
     __questionnaire_cache__ = {}
+    __store_metadata__ = False
 
     @classmethod
     def get_database_mapping(cls):
@@ -52,9 +55,10 @@ class EMRResource(BaseModel):
         for mapping in mappings:
             if mapping in cls.model_fields and mapping not in cls.__exclude__:
                 constructed[mapping] = getattr(obj, mapping)
-        for field in getattr(obj, "meta", {}):
-            if field in cls.model_fields:
-                constructed[field] = obj.meta[field]
+        if cls.__store_metadata__:
+            for field in getattr(obj, "meta", {}):
+                if field in cls.model_fields:
+                    constructed[field] = obj.meta[field]
         cls.perform_extra_serialization(constructed, obj)
         if user:
             cls.perform_extra_user_serialization(constructed, obj, user=user)
@@ -72,7 +76,7 @@ class EMRResource(BaseModel):
             is_update = False
             obj = self.__model__()
         database_fields = self.get_database_mapping()
-        meta = {}
+        meta = getattr(obj, "meta", {})
         dump = self.model_dump(mode="json", exclude_defaults=True)
         for field in dump:
             if (
@@ -81,7 +85,7 @@ class EMRResource(BaseModel):
                 and field not in ["id", "external_id"]
             ):
                 obj.__setattr__(field, dump[field])
-            elif field not in self.__exclude__:
+            elif field not in self.__exclude__ and self.__store_metadata__:
                 meta[field] = dump[field]
         obj.meta = meta
         self.perform_extra_deserialization(is_update, obj)
@@ -140,3 +144,13 @@ class EMRResource(BaseModel):
 
     def to_json(self):
         return self.model_dump(mode="json", exclude=["meta"])
+
+
+PhoneNumber = Annotated[
+    Union[str, phonenumbers.PhoneNumber()],  # noqa: UP007
+    PhoneNumberValidator(
+        default_region=None,
+        supported_regions=[],
+        number_format="E164",
+    ),
+]

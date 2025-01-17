@@ -524,6 +524,10 @@ GOOGLE_CAPTCHA_POST_KEY = "g-recaptcha-response"
 # SMS
 # ------------------------------------------------------------------------------
 USE_SMS = False
+SMS_TEMPLATE = env(
+    "SMS_TEMPLATE",
+    default="Open Healthcare Network Patient Management System Login, OTP is {} Please do not share this Confidential Login Token with anyone else",
+)
 
 # Push Notifications
 # ------------------------------------------------------------------------------

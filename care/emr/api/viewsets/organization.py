@@ -198,11 +198,17 @@ class OrganizationViewSet(EMRModelViewSet):
         return Response({"count": len(data), "results": data})
 
 
+class OrganizationUserFilter(filters.FilterSet):
+    username = filters.CharFilter(field_name="user__username", lookup_expr="icontains")
+
+
 class OrganizationUsersViewSet(EMRModelViewSet):
     database_model = OrganizationUser
     pydantic_model = OrganizationUserWriteSpec
     pydantic_read_model = OrganizationUserReadSpec
     pydantic_update_model = OrganizationUserUpdateSpec
+    filterset_class = OrganizationUserFilter
+    filter_backends = [filters.DjangoFilterBackend]
 
     def get_organization_obj(self):
         return get_object_or_404(

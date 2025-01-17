@@ -7,7 +7,7 @@ from pydantic import UUID4, Field, field_validator, model_validator
 
 from care.emr.models import Organization
 from care.emr.models.patient import Patient
-from care.emr.resources.base import EMRResource
+from care.emr.resources.base import EMRResource, PhoneNumber
 
 
 class BloodGroupChoices(str, Enum):
@@ -32,12 +32,13 @@ class GenderChoices(str, Enum):
 class PatientBaseSpec(EMRResource):
     __model__ = Patient
     __exclude__ = ["geo_organization"]
+    __store_metadata__ = True
 
     id: UUID4 | None = None
-    name: str
+    name: str = Field(max_length=200)
     gender: GenderChoices
-    phone_number: str = Field(max_length=14)
-    emergency_phone_number: str | None = Field(None, max_length=14)
+    phone_number: PhoneNumber = Field(max_length=14)
+    emergency_phone_number: PhoneNumber | None = Field(None, max_length=14)
     address: str
     permanent_address: str
     pincode: int
@@ -67,10 +68,10 @@ class PatientCreateSpec(PatientBaseSpec):
         return geo_organization
 
     def perform_extra_deserialization(self, is_update, obj):
+        obj.geo_organization = Organization.objects.get(
+            external_id=self.geo_organization
+        )
         if not is_update:
-            obj.geo_organization = Organization.objects.get(
-                external_id=self.geo_organization
-            )
             if self.age:
                 obj.year_of_birth = timezone.now().date().year - self.age
             else:

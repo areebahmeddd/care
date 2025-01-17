@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from pydantic import UUID4, Field, field_validator
@@ -24,7 +25,7 @@ class MedicationStatementStatus(str, Enum):
 
 class MedicationStatementInformationSourceType(str, Enum):
     related_person = "related_person"
-    user = "user"
+    practitioner = "practitioner"
     patient = "patient"
 
 
@@ -33,43 +34,23 @@ class BaseMedicationStatementSpec(EMRResource):
     __exclude__ = ["patient", "encounter"]
     id: UUID4 = None
 
-    status: MedicationStatementStatus = Field(
-        ...,
-        description="Represents the current status of the medication request",
-    )
-    reason: str | None = Field(
-        None,
-        description="The reason why the medication is being/was taken",
-    )
+    status: MedicationStatementStatus
+    reason: str | None = None
 
     medication: Coding = Field(
-        ...,
-        description="The medication that was taken",
         json_schema_extra={"slug": CARE_MEDICATION_VALUESET.slug},
     )
     dosage_text: str | None = Field(
         None,
-        description="The dosage of the medication",
     )  # consider using Dosage from MedicationRequest
-    effective_period: Period | None = Field(
-        None,
-        description="The period during which the medication was taken",
-    )
 
-    encounter: UUID4 = Field(
-        ...,
-        description="The encounter where the statement was noted",
-    )
+    effective_period: Period | None = None
 
-    information_source: MedicationStatementInformationSourceType | None = Field(
-        None,
-        description="The source of the information about the medication, patient, related person, or healthcare provider",
-    )
+    encounter: UUID4
 
-    note: str | None = Field(
-        None,
-        description="Any additional notes about the medication",
-    )
+    information_source: MedicationStatementInformationSourceType | None = None
+
+    note: str | None = None
 
 
 class MedicationStatementSpec(BaseMedicationStatementSpec):
@@ -101,6 +82,8 @@ class MedicationStatementSpec(BaseMedicationStatementSpec):
 class MedicationStatementReadSpec(BaseMedicationStatementSpec):
     created_by: UserSpec = dict
     updated_by: UserSpec = dict
+    created_date: datetime
+    modified_date: datetime
 
     @classmethod
     def perform_extra_serialization(cls, mapping, obj):

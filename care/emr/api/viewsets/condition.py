@@ -1,6 +1,7 @@
+from django.shortcuts import get_object_or_404
 from django_filters import CharFilter, FilterSet, UUIDFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError
 
 from care.emr.api.viewsets.base import EMRModelViewSet, EMRQuestionnaireResponseMixin
 from care.emr.api.viewsets.encounter_authz_base import EncounterBasedAuthorizationBase
@@ -13,8 +14,27 @@ from care.emr.resources.condition.spec import (
     CategoryChoices,
     ConditionSpec,
     ConditionSpecRead,
+    ConditionSpecUpdate,
 )
 from care.emr.resources.questionnaire.spec import SubjectType
+
+
+class ValidateEncounterMixin:
+    """
+    Mixin to validate encounter and its relationship with the patient.
+    """
+
+    def validate_data(self, instance, model_obj=None):
+        # Ensure the encounter exists and matches the patient's external ID
+        if model_obj:
+            encounter = model_obj.encounter
+        else:
+            encounter = get_object_or_404(Encounter, external_id=instance.encounter)
+
+        if str(encounter.patient.external_id) != self.kwargs["patient_external_id"]:
+            raise ValidationError(
+                "Patient external ID mismatch with encounter's patient"
+            )
 
 
 class ConditionFilters(FilterSet):
@@ -27,11 +47,15 @@ class ConditionFilters(FilterSet):
 
 
 class SymptomViewSet(
-    EncounterBasedAuthorizationBase, EMRQuestionnaireResponseMixin, EMRModelViewSet
+    ValidateEncounterMixin,
+    EncounterBasedAuthorizationBase,
+    EMRQuestionnaireResponseMixin,
+    EMRModelViewSet,
 ):
     database_model = Condition
     pydantic_model = ConditionSpec
     pydantic_read_model = ConditionSpecRead
+    pydantic_update_model = ConditionSpecUpdate
     # Filters
     filterset_class = ConditionFilters
     filter_backends = [DjangoFilterBackend]
@@ -44,13 +68,6 @@ class SymptomViewSet(
     def perform_create(self, instance):
         instance.category = CategoryChoices.problem_list_item.value
         super().perform_create(instance)
-
-    def authorize_create(self, instance: ConditionSpec):
-        encounter = Encounter.objects.get(external_id=instance.encounter)
-        if str(encounter.patient.external_id) != self.kwargs["patient_external_id"]:
-            err = "Malformed request"
-            raise PermissionDenied(err)
-        # Check if the user has access to the patient and write access to the encounter
 
     def get_queryset(self):
         # Check if the user has read access to the patient and their EMR Data
@@ -70,11 +87,16 @@ InternalQuestionnaireRegistry.register(SymptomViewSet)
 
 
 class DiagnosisViewSet(
-    EncounterBasedAuthorizationBase, EMRQuestionnaireResponseMixin, EMRModelViewSet
+    ValidateEncounterMixin,
+    EncounterBasedAuthorizationBase,
+    EMRQuestionnaireResponseMixin,
+    EMRModelViewSet,
 ):
     database_model = Condition
     pydantic_model = ConditionSpec
     pydantic_read_model = ConditionSpecRead
+    pydantic_update_model = ConditionSpecUpdate
+
     # Filters
     filterset_class = ConditionFilters
     filter_backends = [DjangoFilterBackend]
@@ -87,13 +109,6 @@ class DiagnosisViewSet(
     def perform_create(self, instance):
         instance.category = CategoryChoices.encounter_diagnosis.value
         super().perform_create(instance)
-
-    def authorize_create(self, instance: ConditionSpec):
-        encounter = Encounter.objects.get(external_id=instance.encounter)
-        if str(encounter.patient.external_id) != self.kwargs["patient_external_id"]:
-            err = "Malformed request"
-            raise PermissionDenied(err)
-        # Check if the user has access to the patient and write access to the encounter
 
     def get_queryset(self):
         # Check if the user has read access to the patient and their EMR Data

@@ -122,18 +122,13 @@ class BaseMedicationAdministrationSpec(EMRResource):
     __exclude__ = ["patient", "encounter", "request"]
     id: UUID4 = None
 
-    status: MedicationAdministrationStatus = Field(
-        description="Represents the current status of the medication administration",
-    )
+    status: MedicationAdministrationStatus
+
     status_reason: Coding | None = Field(
         None,
-        description="The reason why the medication was not administered",
         json_schema_extra={"slug": CARE_MEDICATION_VALUESET.slug},
     )
-    category: MedicationAdministrationCategory | None = Field(
-        None,
-        description="The category of the medication administration",
-    )
+    category: MedicationAdministrationCategory | None = None
 
     medication: Coding = Field(
         description="The medication that was taken",

@@ -1,3 +1,5 @@
+import secrets
+import string
 from datetime import timedelta
 
 from django.conf import settings
@@ -8,11 +10,17 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from care.emr.api.viewsets.base import EMRBaseViewSet
-from care.facility.api.serializers.patient_otp import rand_pass
-from care.facility.models import PatientMobileOTP
+from care.facility.models.patient import PatientMobileOTP
 from care.utils.models.validators import mobile_validator
 from care.utils.sms.send_sms import send_sms
 from config.patient_otp_token import PatientToken
+
+
+def rand_pass(size):
+    if not settings.USE_SMS:
+        return "45612"
+
+    return "".join(secrets.choice(string.digits) for _ in range(size))
 
 
 class OTPLoginRequestSpec(BaseModel):
@@ -54,8 +62,7 @@ class OTPLoginView(EMRBaseViewSet):
                 send_sms(
                     data.phone_number,
                     (
-                        f"Open Healthcare Network Patient Management System Login, OTP is {random_otp} . "
-                        "Please do not share this Confidential Login Token with anyone else"
+                        f"Kerala Care Login, OTP {random_otp}.  Please do not share this Confidential Login Token with anyone else"
                     ),
                 )
             except Exception as e:

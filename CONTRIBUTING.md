@@ -119,7 +119,12 @@ python manage.py runserver
 Docker:
 
 ```bash
+# To run all tests
 make test
+```
+```bash
+# To run a specific test file, class, or method:
+make test path=<path_to_test>
 ```
 Local:
 

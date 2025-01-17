@@ -100,6 +100,7 @@ class UserRetrieveSpec(UserSpec):
     geo_organization: dict
     created_by: dict
     email: str
+    flags: list[str] = []
 
     @classmethod
     def perform_extra_serialization(cls, mapping, obj: User):
@@ -112,3 +113,4 @@ class UserRetrieveSpec(UserSpec):
             mapping["geo_organization"] = OrganizationReadSpec.serialize(
                 obj.geo_organization
             ).to_json()
+        mapping["flags"] = obj.get_all_flags()

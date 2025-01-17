@@ -113,3 +113,18 @@ class ConditionSpecRead(BaseConditionSpec):
             mapping["created_by"] = UserSpec.serialize(obj.created_by)
         if obj.updated_by:
             mapping["updated_by"] = UserSpec.serialize(obj.updated_by)
+
+
+class ConditionSpecUpdate(BaseConditionSpec):
+    clinical_status: ClinicalStatusChoices | None = None
+    verification_status: VerificationStatusChoices
+    severity: SeverityChoices | None = None
+    code: Coding = Field(json_schema_extra={"slug": CARE_CODITION_CODE_VALUESET.slug})
+    onset: ConditionOnSetSpec = {}
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, code: int):
+        return validate_valueset(
+            "code", cls.model_fields["code"].json_schema_extra["slug"], code
+        )

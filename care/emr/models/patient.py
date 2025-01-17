@@ -32,7 +32,7 @@ class Patient(EMRBaseModel):
 
     marital_status = models.CharField(max_length=50, default="")
 
-    blood_group = models.CharField()
+    blood_group = models.CharField(max_length=16)
 
     geo_organization = models.ForeignKey(
         "emr.Organization", on_delete=models.SET_NULL, null=True, blank=True
