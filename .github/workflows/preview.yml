@@ -41,6 +41,9 @@ jobs:
           cat > docker-compose.preview.override.yaml <<'YAML'
           services:
             backend:
+              depends_on:
+                celery:
+                  condition: service_started
               environment:
                 DATABASE_URL: "${NEON_DB_URL}"
             celery:
