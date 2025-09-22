@@ -1,0 +1,138 @@
+name: PR Preview (Backend + Neon)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  preview-up:
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '/preview up')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve PR number and branch
+        id: prmeta
+        run: |
+          echo "pr=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.event.issue.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+
+      - name: Create Neon Branch
+        id: neon
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: preview/pr-${{ steps.prmeta.outputs.pr }}-${{ steps.prmeta.outputs.branch }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+          username: ${{ secrets.NEON_DB_USERNAME }}
+          parent: production
+
+      - name: Write compose override with Neon DB url
+        run: |
+          cat > docker-compose.preview.override.yaml <<'YAML'
+          services:
+            backend:
+              environment:
+                DATABASE_URL: "${NEON_DB_URL}"
+            celery:
+              environment:
+                DATABASE_URL: "${NEON_DB_URL}"
+          YAML
+        env:
+          NEON_DB_URL: ${{ steps.neon.outputs.db_url }}
+
+      - name: Install cloudflared
+        run: |
+          wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+      - name: Start tunnel
+        id: tunnel
+        run: |
+          cloudflared tunnel --url http://localhost:9000 --no-autoupdate > cloudflared.log 2>&1 &
+          sleep 5
+          url=$(grep -o "https://.*trycloudflare.com" cloudflared.log | head -n 1)
+          if [ -z "$url" ]; then exit 1; fi
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      - name: Run app with Neon DB
+        run: |
+          docker compose \
+            -f docker-compose.yaml \
+            -f docker-compose.local.yaml \
+            -f docker-compose.preview.override.yaml up -d
+
+      - name: Comment PR with preview info
+        run: |
+          gh pr comment ${{ github.event.issue.number }} --body "$(cat <<MSG
+          Preview up:
+          - URL: ${{ steps.tunnel.outputs.url }}
+          - DB branch: preview/pr-${{ steps.prmeta.outputs.pr }}-${{ steps.prmeta.outputs.branch }}
+          - DATABASE_URL is injected via override
+          MSG
+          )"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  preview-down:
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '/preview down')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve PR number and branch
+        id: prmeta
+        run: |
+          echo "pr=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.event.issue.pull_request.head.ref }}" >> $GITHUB_OUTPUT
+
+      - name: Stop app
+        run: |
+          docker compose -f docker-compose.yaml -f docker-compose.local.yaml down
+
+      - name: Delete Neon Branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/pr-${{ steps.prmeta.outputs.pr }}-${{ steps.prmeta.outputs.branch }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Comment stopped
+        run: |
+          gh pr comment ${{ github.event.issue.number }} --body "Preview environment has been stopped and Neon DB branch deleted."
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  pr-closed-cleanup:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Neon Branch
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/pr-${{ github.event.number }}-${{ github.event.pull_request.head.ref }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Comment PR with cleanup info
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const prNumber = context.payload.number;
+            const branchName = context.payload.pull_request.head.ref;
+            const dbBranchName = `preview/pr-${prNumber}-${branchName}`;
+            github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Preview environment removed. Deleted Neon DB branch \`${dbBranchName}\`.`
+            });
