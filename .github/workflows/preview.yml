@@ -28,7 +28,7 @@ jobs:
 
       - name: Create Neon Branch
         id: neon
-        uses: neondatabase/create-branch-action@v6
+        uses: neondatabase/create-branch-action@v5
         with:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch_name: preview/pr-${{ steps.prmeta.outputs.pr }}-${{ steps.prmeta.outputs.branch }}
@@ -41,14 +41,17 @@ jobs:
           cat > docker-compose.preview.override.yaml <<'YAML'
           services:
             backend:
-              depends_on:
-                celery:
-                  condition: service_started
               environment:
                 DATABASE_URL: "${NEON_DB_URL}"
             celery:
               environment:
                 DATABASE_URL: "${NEON_DB_URL}"
+              healthcheck:
+                test: ["CMD", "celery", "-A", "config.celery_app", "inspect", "ping"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+                start_period: 40s
           YAML
         env:
           NEON_DB_URL: ${{ steps.neon.outputs.db_url }}
